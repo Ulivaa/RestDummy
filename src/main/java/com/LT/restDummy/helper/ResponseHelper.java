@@ -10,6 +10,7 @@ import com.LT.restDummy.servises.dto.ServiceRequestDto;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.json.simple.JSONObject;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 
 import java.security.SecureRandom;
@@ -58,10 +59,18 @@ public class ResponseHelper {
                     responseCorrelate(request,
                             getResponseByPercent(ServiceValue.getInstance().getServiceByName(serviceName)),
                             ServiceValue.getInstance().getTypeByService(serviceName)),
-                    serviceName);
+                    serviceName, setHeader(serviceName));
         } else throw new ServiceException("Сервис временно недоступен. Включите заглушку");
     }
 
+    public static HttpHeaders setHeader(String serviceName) {
+        HttpHeaders responseHeaders = new HttpHeaders();
+
+        if (ServiceValue.getInstance().getTypeByService(serviceName).equalsIgnoreCase("json")) {
+            responseHeaders.add("Content-Type", "application/json");
+        } else responseHeaders.add("Content-Type", "application/xml");
+        return responseHeaders;
+    }
 
     /*
             Сортирует пороговые значения ответов по возрастанию, если рандомное число попадает в порог то отправляем ответ закрепленный за порогом
