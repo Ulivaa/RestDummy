@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 
-/*
+/**
 Класс каждые 60с делает проверку текущего времени и времени задержки,
 если оно совпадает - выставляется задержка или выключается сервис
 */
@@ -29,7 +29,7 @@ public class Scheduler {
         boolean isScheduledAvailability = false;
         LocalDateTime now = LocalDateTime.parse(LocalDateTime.now().format(DATE_TIME_FORMATTER), DATE_TIME_FORMATTER);
         HashMap<String, Boolean> servicesStop = new HashMap<>();
-/*
+/**
             Проверка на соответствие текущего времени и времени остановки сервиса, если хоть один соответствует,
             то он останавливается и время шедулится на 10минут
 */
@@ -63,7 +63,7 @@ public class Scheduler {
         LocalDateTime now = LocalDateTime.parse(LocalDateTime.now().format(DATE_TIME_FORMATTER), DATE_TIME_FORMATTER);
         HashMap<String, Boolean> servicesDelay = new HashMap<>();
 
-/*
+/**
             Проверка на соответствие текущего времени и времени остановки сервиса, если хоть один соответствует,
             то он останавливается и время шедулится на 10минут
 */

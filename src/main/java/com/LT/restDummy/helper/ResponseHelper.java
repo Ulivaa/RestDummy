@@ -22,7 +22,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-/*
+/**
 Класс помощник для работы с ответами сервисов
 */
 @Slf4j
@@ -39,7 +39,7 @@ public class ResponseHelper {
                                                                            Boolean isAvailable) {
         log.info("REQUEST: " + request);
 
-/*
+/**
          Если параметры заданы, то обновляем их
 */
         if (delay != 0) {
@@ -48,11 +48,11 @@ public class ResponseHelper {
         if (isAvailable != null) {
             ServiceValue.getInstance().setAvailabilityToService(serviceName, isAvailable);
         }
-/*
+/**
          Если сервис доступен, то возвращаем его
 */
         if (ServiceValue.getInstance().getAvailabilityByService(serviceName)) {
-/*
+/**
             передаем параметры для задержки: секунды, закоррелированный ответ и сервис
 */
             return ResponseDelay.scheduleResponse(ServiceValue.getInstance().getDelayByService(serviceName),
@@ -72,7 +72,7 @@ public class ResponseHelper {
         return responseHeaders;
     }
 
-    /*
+    /**
             Сортирует пороговые значения ответов по возрастанию, если рандомное число попадает в порог то отправляем ответ закрепленный за порогом
     */
     public static String getResponseByPercent(Service service) {
@@ -138,7 +138,7 @@ public class ResponseHelper {
     }
 
     public static String responseCorrelate(String request, String response, String type) {
-/*
+/**
        собираем все параметры, необходимые к замене
 */
         Matcher matcher = Pattern.compile("__([a-zA-Z0-9<>]+)__").matcher(response);
@@ -149,7 +149,7 @@ public class ResponseHelper {
 
         Pattern patternResponse;
         for (String param : params) {
-/*
+/**
             Заменяем найденную подстроку на значение из запроса или текущее время
 */
             if (param.equalsIgnoreCase("rqtm") || param.equalsIgnoreCase("rstm")) {
@@ -164,7 +164,7 @@ public class ResponseHelper {
                 int num = Integer.parseInt(StringUtils.substringBetween(param, "<", ">"));
                 response = StringUtils.replace(response, "__" + param + "__", randomChar(num));
             }
-/*
+/**
             Собираем подстроку которую нужно будет заменить в ответе. Пример: __RqUID__
 */
             switch (type) {

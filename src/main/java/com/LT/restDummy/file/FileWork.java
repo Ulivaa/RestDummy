@@ -18,7 +18,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-/*
+/**
 Класс для работы с файлами и данными из файлов
 */
 @Slf4j
@@ -87,6 +87,7 @@ public class FileWork {
         service.setCurrentDelay(getContentDelay(content));
         service.setTimeout(getContentTimeout(content));
         service.setDelayForScheduler(ServiceValue.calculateMinus10PercentDelay(service.getTimeout()));
+        service.setEndpoint(getContentEndPoint(content));
         if (service.isPercentage()) {
             service.setThresholds(service.getResponse().keySet().stream().sorted().collect(Collectors.toList()));
         }
@@ -140,7 +141,7 @@ public class FileWork {
         return arrayList;
     }
 
-/*
+/**
         Вытаскиваем сабсистем или создаем файл-уведомление
 */
     public static Properties getInfluxProperty() {

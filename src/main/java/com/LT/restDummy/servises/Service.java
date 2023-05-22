@@ -27,6 +27,7 @@ public class Service {
     private LocalDateTime schedulerToDelay = LocalDateTime.of(2000, 01, 01, 01, 01);
     private Long DelayForScheduler;
     private String type;
+    private String endpoint;
 
     public Service(String name, Long delay, boolean available) {
         this.name = name;
