@@ -13,7 +13,7 @@ import org.springframework.context.annotation.PropertySource;
 
 import java.util.concurrent.TimeUnit;
 
-/*
+/**
 Класс создает бины для инфлюкса
 */
 @Configuration

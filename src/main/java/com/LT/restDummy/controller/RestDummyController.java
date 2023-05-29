@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import java.util.concurrent.CompletableFuture;
 
-/*
+/**
 Класс реализует ответ на rest вызов сервисов
 */
 @Slf4j

@@ -1,6 +1,8 @@
 package com.LT.restDummy.servises.viewData;
 
-///*Необходим для отображения через GUI*/
+/**
+Необходим для отображения через GUI
+*/
 
 import lombok.Getter;
 import lombok.Setter;

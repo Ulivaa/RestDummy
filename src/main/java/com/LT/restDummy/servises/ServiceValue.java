@@ -19,7 +19,7 @@ public class ServiceValue {
         static final ServiceValue HOLDER_INSTANCE = new ServiceValue();
     }
 
-    /*
+    /**
          необходимо для использования нестатической переменной в статическом методе
     */
     public static ServiceValue getInstance() {
@@ -58,12 +58,16 @@ public class ServiceValue {
 
 
     public void updateService(Service updatingService) {
-        Service service = services.get(updatingService.getName());
-        service.setCurrentDelay(updatingService.getCurrentDelay());
-        service.setAvailable(updatingService.isAvailable());
+        Service service;
+        for (Service serv: services.values()){
+            if (serv.getName().equals(updatingService.getName())){
+            service = serv;
+            service.setCurrentDelay(updatingService.getCurrentDelay());
+            service.setAvailable(updatingService.isAvailable());}
+        }
     }
 
-    /*
+    /**
             AVAILABILITY
     */
     public boolean getAvailabilityByService(@NonNull String serviceName) {
@@ -89,7 +93,7 @@ public class ServiceValue {
     }
 
 
-    /*
+    /**
         DELAY
     */
     public long getDelayByService(@NonNull String serviceName) {
@@ -122,7 +126,7 @@ public class ServiceValue {
         return services.get(serviceName).getSchedulerToDelay();
     }
 
-    /*
+    /**
             возвращать задержку для шедуллера
     */
     public long getDelayForSchedulerByService(@NonNull String serviceName) {
@@ -130,7 +134,7 @@ public class ServiceValue {
     }
 
 
-    /*
+    /**
             выставлять задержку для шедуллера
     */
     public void setNewDelayToScheduler(@NonNull String serviceName, @NonNull long valueOfDelay) {
@@ -149,7 +153,7 @@ public class ServiceValue {
             log.error("Cant set new value for '{}', service not found", serviceName);
     }
 
-    /*
+    /**
             ставит задержку -10% от таймаута. Если таймаут не задан, то оставляет задержку как есть.
     */
     public void setMinus10PercentDelay() {

@@ -32,7 +32,7 @@ public class DelayController {
         this.serviceValue = serviceValue;
     }
 
-/*
+/**
       страница с информацией по доступности сервиса, задержке и таймаутам
 */
     @GetMapping("/delay")
@@ -41,7 +41,7 @@ public class DelayController {
         return "delay";
     }
 
-/*
+/**
       страница редактирования доступности сервиса и задержки
 */
     @GetMapping(value = "/delay/edit")
@@ -50,7 +50,7 @@ public class DelayController {
         return "edit";
     }
 
-/*
+/**
         сохранение информации после редактирования
 */
     @RequestMapping(value = "/delay/save")
@@ -65,7 +65,7 @@ public class DelayController {
         return "redirect:/delay";
     }
 
-/*
+/**
       ставит отклик -10% от таймаута
 */
     @RequestMapping("/delay/calculate")
@@ -74,7 +74,7 @@ public class DelayController {
         return "redirect:/delay";
     }
 
-/*
+/**
         вернуть дефолтные задержки
 */
     @RequestMapping("/delay/default")
@@ -83,7 +83,7 @@ public class DelayController {
         return "redirect:/delay";
     }
 
-/*
+/**
         включить все сервисы
 */
     @RequestMapping("/delay/enableServices")
@@ -92,7 +92,7 @@ public class DelayController {
         return "redirect:/delay";
     }
 
-/*
+/**
         выключить все сервисы
 */
     @RequestMapping("/delay/disableServices")
@@ -108,7 +108,7 @@ public class DelayController {
         return "newServices";
     }
 
-/*
+/**
         Сохранение сервиса. Если есть параметр эндпоинта, то он становится именем сервиса(но не файла)
 */
     @RequestMapping(value = "/services/save")

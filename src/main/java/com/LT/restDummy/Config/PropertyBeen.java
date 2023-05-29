@@ -17,8 +17,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.stream.Collectors;
 
-/*Класс создает бины для работы с сервисами, их задержками и доступностью.
-Инициализирует сервисы из файлов, если они есть в папке*/
+/**
+ * Класс создает бины для работы с сервисами, их задержками и доступностью.
+Инициализирует сервисы из файлов, если они есть в папке
+ */
 @Configuration
 @Slf4j
 public class PropertyBeen {
