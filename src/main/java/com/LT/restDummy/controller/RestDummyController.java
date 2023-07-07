@@ -34,12 +34,20 @@ public class RestDummyController {
     }
 
     @PostMapping("/customEndpoint/**")
-    public CompletableFuture<ResponseEntity<String>> getResponseCustomEndpoint(@RequestBody String request,
+    public CompletableFuture<ResponseEntity<String>> postResponseCustomEndpoint(@RequestBody String request,
                                                                                @RequestParam(defaultValue = "0") Long delay,
                                                                                @RequestParam(required = false) Boolean isAvailable,
                                                                                HttpServletRequest httpServletRequest) {
         String path = httpServletRequest.getRequestURI().replaceAll("/customEndpoint", "");
         return ResponseHelper.returnResponse(request, path, delay, isAvailable);
+    }
+    @GetMapping("/customEndpoint/**")
+    public CompletableFuture<ResponseEntity<String>> getResponseCustomEndpoint(
+                                                                               @RequestParam(defaultValue = "0") Long delay,
+                                                                               @RequestParam(required = false) Boolean isAvailable,
+                                                                               HttpServletRequest httpServletRequest) {
+        String path = httpServletRequest.getRequestURI().replaceAll("/customEndpoint", "");
+        return ResponseHelper.returnResponse("", path, delay, isAvailable);
     }
 
     @GetMapping("/getServices")

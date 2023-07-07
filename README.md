@@ -47,12 +47,9 @@ type=json;
 {
 "rqUid": "__rqUid__",
 "rqTm": "__rqTm__",
-"operUid": "ccc147cfbbe14934a2b470bb0afa20f4",
-"spName": "urn: sbrfsystems: 99-ufs",
-"systemId": "urn: sbrfsystems: 99-pprb",
+"operUid": "ssssssssss",
 "status": {
 "statusCode": 0,
-"statusDesc": "Успешно создан драфт договора. "
 }
 }
 ---
