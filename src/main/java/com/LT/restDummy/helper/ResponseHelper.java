@@ -2,6 +2,7 @@ package com.LT.restDummy.helper;
 
 import com.LT.restDummy.date.DateModule;
 import com.LT.restDummy.exception.ServiceException;
+import com.LT.restDummy.influx.InfluxWriter;
 import com.LT.restDummy.servises.ResponseDelay;
 import com.LT.restDummy.servises.Service;
 import com.LT.restDummy.servises.ServiceMapper;
@@ -36,139 +37,6 @@ public class ResponseHelper {
     private static final String DATA_FOR_RQUID = CHAR_LOWER_RQUID + CHAR_UPPER_RQUID + NUMBER;
     private static final String DATA_FOR_RANDOM_STRING = CHAR_LOWER + CHAR_UPPER;
     private static SecureRandom random = new SecureRandom();
-    private static final String secondResponseFindClaimById = "{\n" +
-            "    \"status\": {\n" +
-            "        \"severity\": \"COMPLETED\",\n" +
-            "        \"code\": 0\n" +
-            "    },\n" +
-            "    \"claim\": {\n" +
-            "        \"idbl\": 10012305000042438,\n" +
-            "        \"type\": \"UfsIncreaseCardCreditLimit\",\n" +
-            "        \"state\": \"SUCCESS\",\n" +
-            "        \"initiator\": {\n" +
-            "            \"sourceSystem\": \"urn:sbrfsystems:99-ufs\"\n" +
-            "        },\n" +
-            "        \"client\": {\n" +
-            "            \"epkID\": \"__epkID__\"\n" +
-            "        },\n" +
-            "        \"data\": {\n" +
-            "            \"operUID\": \"__operUID__\",\n" +
-            "            \"systemName\": \"CREDIT_CARDS_LIMIT_INC_MB\",\n" +
-            "            \"subSystemCode\": \"CREDIT_CARDS_LIMIT_INC_MB\",\n" +
-            "            \"application\": {\n" +
-            "                \"srcObjID\": \"00p3_0000000000001733431\",\n" +
-            "                \"appDate\": \"2023-04-22\",\n" +
-            "                \"unit\": \"99903801164\",\n" +
-            "                \"channel\": \"16\",\n" +
-            "                \"channelCBRegAApprove\": \"3\"\n" +
-            "            },\n" +
-            "            \"product\": {\n" +
-            "                \"type\": \"3\",\n" +
-            "                \"code\": \"50\",\n" +
-            "                \"subProductCode\": \"911\",\n" +
-            "                \"amount\": 200000,\n" +
-            "                \"contractLoanAmount\": 510000,\n" +
-            "                \"cardNumber\": \"220220F2A43E7809\",\n" +
-            "                \"contractNumber\": \"99ТКПР23042100605803\",\n" +
-            "                \"cardStatus\": \"+\",\n" +
-            "                \"contractStatus\": \"+\",\n" +
-            "                \"interestRate\": 23.9,\n" +
-            "                \"preAmount\": 0\n" +
-            "            },\n" +
-            "            \"applicant\": {\n" +
-            "                \"clientGroup\": \"x\",\n" +
-            "                \"idEPK\": \"1786879448000710812\",\n" +
-            "                \"appGroup\": \"x\",\n" +
-            "                \"citizenship\": \"RUSSIA\",\n" +
-            "                \"emailAddr\": \"FOO@FOO.RU\"\n" +
-            "            },\n" +
-            "            \"personInfo\": {\n" +
-            "                \"lastName\": \"Шестаков\",\n" +
-            "                \"firstName\": \"Изот\",\n" +
-            "                \"middleName\": \"Филиппович\",\n" +
-            "                \"sex\": \"1\",\n" +
-            "                \"birthday\": \"1983-02-02\",\n" +
-            "                \"birthPlace\": \"Сбер-Аист\"\n" +
-            "            },\n" +
-            "            \"phones\": [{\n" +
-            "                    \"type\": \"1\",\n" +
-            "                    \"countryPrefix\": \"9\",\n" +
-            "                    \"prefix\": \"984\",\n" +
-            "                    \"number\": \"750103\"\n" +
-            "                }, {\n" +
-            "                    \"type\": \"1\",\n" +
-            "                    \"countryPrefix\": \"7\",\n" +
-            "                    \"prefix\": \"991\",\n" +
-            "                    \"number\": \"3578989\"\n" +
-            "                }\n" +
-            "            ],\n" +
-            "            \"residenceEqualFlag\": true,\n" +
-            "            \"address\": [{\n" +
-            "                    \"manualInputFlag\": false,\n" +
-            "                    \"addrType\": \"1\",\n" +
-            "                    \"postalCode\": \"111677\",\n" +
-            "                    \"regionCode\": \"0077\",\n" +
-            "                    \"cityType\": \"301\",\n" +
-            "                    \"city\": \"МОСКВА\",\n" +
-            "                    \"streetType\": \"529\",\n" +
-            "                    \"street\": \"НЕДОРУБОВА\",\n" +
-            "                    \"houseNum\": \"23\",\n" +
-            "                    \"unitNum\": \"9\"\n" +
-            "                }, {\n" +
-            "                    \"manualInputFlag\": false,\n" +
-            "                    \"addrType\": \"2\",\n" +
-            "                    \"postalCode\": \"111677\",\n" +
-            "                    \"regionCode\": \"0077\",\n" +
-            "                    \"cityType\": \"301\",\n" +
-            "                    \"city\": \"МОСКВА\",\n" +
-            "                    \"streetType\": \"529\",\n" +
-            "                    \"street\": \"НЕДОРУБОВА\",\n" +
-            "                    \"houseNum\": \"23\",\n" +
-            "                    \"unitNum\": \"9\"\n" +
-            "                }\n" +
-            "            ],\n" +
-            "            \"identityCard\": {\n" +
-            "                \"idType\": \"21\",\n" +
-            "                \"idSeries\": \"XXXX\",\n" +
-            "                \"idNum\": \"944080\",\n" +
-            "                \"issuedBy\": \"ОВД Соколиная гора\",\n" +
-            "                \"issuedCode\": \"309-010\",\n" +
-            "                \"issueDt\": \"2023-03-08\",\n" +
-            "                \"prevIDInfoFlag\": false\n" +
-            "            },\n" +
-            "            \"income\": {\n" +
-            "                \"basicIncome6M\": 200000\n" +
-            "            },\n" +
-            "            \"addData\": {\n" +
-            "                \"cbReqApprovalFlag\": true,\n" +
-            "                \"cbSendApprovalFlag\": true,\n" +
-            "                \"pfrReqApprovalFlag\": false,\n" +
-            "                \"consentOPSS\": true,\n" +
-            "                \"signingDate\": \"2023-04-21\"\n" +
-            "            },\n" +
-            "            \"campaigningOfferInfo\": {\n" +
-            "                \"channel\": \"MOB\",\n" +
-            "                \"rType\": \"R400\",\n" +
-            "                \"rDate\": \"2023-04-22T16:57:06.792Z\",\n" +
-            "                \"rValue\": \"710000\"\n" +
-            "            },\n" +
-            "            \"approval\": {\n" +
-            "                \"declineDate\": \"2023-04-23T00:00\",\n" +
-            "                \"creditCardLimit\": 800000,\n" +
-            "                \"thresholdPTI\": 700000\n" +
-            "            },\n" +
-            "            \"status\": {\n" +
-            "                \"statusDesc\": \"Принято положительное решение\",\n" +
-            "                \"declineCodeForInfo\": \"00\",\n" +
-            "                \"applicationNumber\": \"4343530540\",\n" +
-            "                \"declineDateForInfo\": \"2023-04-22\",\n" +
-            "               \"declineReasonCode\": \"P001\",\n" +
-            "                \"statusCode\": 14\n" +
-            "            }\n" +
-            "        }\n" +
-            "    }\n" +
-            "}\n" +
-            " ";
 
     public static CompletableFuture<ResponseEntity<String>> returnResponse(String request, String serviceName,
                                                                            long delay,
@@ -176,7 +44,7 @@ public class ResponseHelper {
         log.info("REQUEST: " + request);
 
 /**
- Если параметры заданы, то обновляем их
+ * Если параметры заданы, то обновляем их
  */
         if (delay != 0) {
             ServiceValue.getInstance().setNewDelayToService(serviceName, delay);
@@ -191,19 +59,11 @@ public class ResponseHelper {
 /**
  передаем параметры для задержки: секунды, закоррелированный ответ и сервис
  */
-            if (serviceName.equals("findClaimById") && request.contains("10012305000042438")) {
-                return ResponseDelay.scheduleResponse(ServiceValue.getInstance().getDelayByService(serviceName),
-                        responseCorrelate(request,
-                                secondResponseFindClaimById,
-                                ServiceValue.getInstance().getTypeByService(serviceName)),
-                        serviceName, setHeader(serviceName));
-            } else {
-                return ResponseDelay.scheduleResponse(ServiceValue.getInstance().getDelayByService(serviceName),
-                        responseCorrelate(request,
-                                getResponseByPercent(ServiceValue.getInstance().getServiceByName(serviceName)),
-                                ServiceValue.getInstance    ().getTypeByService(serviceName)),
-                        serviceName, setHeader(serviceName));
-            }
+            return ResponseDelay.scheduleResponse(ServiceValue.getInstance().getDelayByService(serviceName),
+                    responseCorrelate(request,
+                            getResponseByPercent(ServiceValue.getInstance().getServiceByName(serviceName)),
+                            ServiceValue.getInstance().getTypeByService(serviceName)),
+                    serviceName, setHeader(serviceName));
         } else throw new ServiceException("Сервис временно недоступен. Включите заглушку");
     }
 
