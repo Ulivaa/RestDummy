@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
-Необходим для отображения через GUI
+ * Необходим для отображения через GUI
  */
 @Getter
 @Setter

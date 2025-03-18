@@ -1,5 +1,14 @@
-server.port=20001
+server.port=20002
 # меняйте логирование на что-то другое только если жизненно необходимо!
 logging.level.root=info
-subsystem=VASHA_SUBSYSTEM
-influxdb.chanel=SBOL
+subsystem=testSubsys
+channel=channel
+block=B1
+victoria.url=http://localhost:8480/insert/0/prometheus/api/v1/import/prometheus
+
+# заглушка поднимается с протоколом https
+# use.https=true
+# заглушка поднимается с протоколами https и http
+# use.http.https=true
+# порт http для одновременного использования заглушки по https и http
+# server.http.port=10001

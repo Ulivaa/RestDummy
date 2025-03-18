@@ -19,7 +19,7 @@
             <thead class="thead-dark">
             <tr>
                 <th class="col-3">Сервис - название файла и эндпоинта</th>
-                <th>Полный текст файла. Для корректной работы должен включать delay, timeout и type</th>
+                <th>Текст файла и параметры</th>
             </tr>
             </thead>
             <tbody>
@@ -29,54 +29,70 @@
                            th:name="ServiceName"
                            th:value="${viewServiceNewData.getServiceName()}" placeholder='NewService'/>
 
-                    <div class="text-grey"> <br> Чтобы отредактировать текущий текст сервиса - введите только название
-                        нужного сервиса и нажмите кнопку "Хочу текст файла".</div>
+                    <div class="text-grey">
+                        Чтобы отредактировать текущий текст сервиса - введите только название
+                        нужного сервиса и нажмите кнопку "Хочу текст файла".
+                    </div>
                 </td>
                 <td>
-                    <textarea class="form-control form-addSrv" rows="21"
+                    Ваш response:
+                    <textarea class="form-control form-addSrv" rows="16"
                               th:name="Content"
                               th:text="${viewServiceNewData.getContent()}" placeholder='{
-    "rqUid": "__rqUid__",
-    "rqTm": "__rqTm__",
-    "operUid": "ccc147cfbbe14934a2b470bb0afa20f4",
-    "spName": "urn: sbrfsystems: 99-ufs",
-    "systemId": "urn: sbrfsystems: 99-pprb",
-    "status": {
-        "statusCode": 0,
-        "statusDesc": "Успешно создан драфт договора. "
-    }
-}
-/* Обращайте внимание на имя параметров типа __rqUid__ - РЕГИСТР ДОЛЖЕН СООТВЕТСТВОВАТЬ ПОЛЮ/TЭГУ.
-Ниже - обязательный для заполнения раздел.
-Для корректной работы необходимо заключить текст в "---".
-И закрывать каждый параметр ";".
-Поддерживаемые типы файлов: xml, json. */
----
-delay=1000;
-timeout=3000;
-type=json;
----'  ></textarea>
-                </td>
+                                "rqUid": "__rqUid__",
+                                "rqTm": "__rqTm__",
+                                "operUid": "ccc147cfbbe14934a2b470bb0afa20f4",
+                                "spName": "urn: sbrfsystems: 99-ufs",
+                                "systemId": "urn: sbrfsystems: 99-pprb",
+                                "status": {
+                                    "statusCode": 0,
+                                    "statusDesc": "Успешно создан драфт договора. "
+                                }
+                            }
+                            /* Обращайте внимание на имя параметров типа __rqUid__ - РЕГИСТР ДОЛЖЕН СООТВЕТСТВОВАТЬ ПОЛЮ/TЭГУ.
+                            '></textarea>
+                    Параметры для вашего сервиса:
+                    <textarea class="form-control form-addSrv" rows="9"
+                              th:name="Params"
+                              th:text="${viewServiceNewData.getParams()}" placeholder='
+                              {имя сервиса}.type={type сервиса}
+                              {имя сервиса}.delay={delay сервиса}
+                              {имя сервиса}.timeout={timeout сервиса}
+                              {имя сервиса}.systemName={АС сервиса}
+                              {имя сервиса}.param.name={имя параметра для разных ответов}
+                              {имя сервиса}.param.value={значение параметра}
+                              {имя сервиса}.param.responseNum={номер ответа, если в запросе нужный параметр}
+                              {имя сервиса}.endpoint={endpoint сервиса}
+                              {имя сервиса}.threshold={threshold для сервиса}'
+                    ></textarea>
+                    <input class="btnCopy buttonBlack" value="Скопировать параметры"></input>
             </tr>
             </tbody>
         </table>
         <div class="div-btn-submit">
-            <input class="buttonBlack" type="button" name="save_btn" id="save_btn" value="Сохранить"/>
-            <input  type="button" name="update_btn" id="update_btn" value="Хочу текст файла"  class="buttonBlack"  />
+            <input class="buttonBlack" type="submit" formaction="/services/save" name="save_btn" id="save_btn" value="Сохранить"/>
+            <input class="buttonBlack" type="submit" formaction="/services/update" name="update_btn" id="update_btn" value="Хочу текст файла"/>
         </div>
     </form>
 </div>
 </body>
 <script>
-    $('#save_btn').click(function(){
-        var form = document.getElementById("myForm")
-        form.action = "/services/save";
-        form.submit();
-    });
-    $('#update_btn').click(function(){
-        var form = document.getElementById("myForm")
-        form.action = "/services/update";
-        form.submit();
-    });
+    document.querySelector(".btnCopy").onclick = function () {
+    let params = `{имя сервиса}.type={type сервиса}
+{имя сервиса}.delay={delay сервиса}
+{имя сервиса}.timeout={timeout сервиса}
+{имя сервиса}.systemName={АС сервиса}
+{имя сервиса}.param.name={имя параметра для разных ответов}
+{имя сервиса}.param.value={значение параметра}
+{имя сервиса}.param.responseNum={номер ответа, если в запросе нужный параметр}
+{имя сервиса}.endpoint={endpoint сервиса}
+{имя сервиса}.threshold={threshold для сервиса}`
+
+    if (document.querySelector('input[name="ServiceName"]').value !== '') {
+        params = params.replaceAll('{имя сервиса}', document.querySelector('input[name="ServiceName"]').value)
+    }
+
+    navigator.clipboard.writeText(params)
+}
 </script>
 </html>

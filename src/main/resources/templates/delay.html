@@ -2,29 +2,42 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Stub-GUI</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-    <link href="webjars/bootstrap/4.4.1/css/bootstrap.min.css" rel="stylesheet"/>
+    <title th:text="${subsystem}"></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <script src="/jquery-3.5.1.min.js"></script>
+    <script src="/jquery.inputmask.js"></script>
+    <script src="/inputmask.date.extensions.js"></script>
+    <link href="/webjars/bootstrap/4.4.1/css/bootstrap.min.css" rel="stylesheet"/>
     <link href="/bootstrap-icons.css" rel="stylesheet"/>
     <link href="/style.css" rel="stylesheet"/>
+    <link href="/datatables.min.css" rel="stylesheet">
 </head>
 <body class="py-4">
 <div class="delay-table">
-    <table class="table">
+    <!--    <form id='myForm' action="#" th:object="${form}" method="post">-->
+
+    <table class="table" style="width:80%">
         <thead class="thead-dark">
         <tr>
             <th>Сервис</th>
+            <th>АС</th>
             <th>Задержка в ms</th>
             <th>Timeout в СУП в ms</th>
-            <th>Scheduler Delay <span class="prompt" title="Задерка выставляется на 10мин">?</span></th>
+            <th>Scheduler Delay <span class="prompt" title="Задержка выставляется на 10мин">?</span></th>
             <th>Доступность сервиса</th>
             <th>Scheduler выключения <span class="prompt" title="Сервис выключается на 10мин">?</span></th>
         </tr>
         </thead>
         <tbody>
         <tr th:each="service, itemStat : ${form.viewService}">
-            <td><span th:text="${service.name}">Сервис</span></td>
+            <td>
+                <form action="/services/update" th:object="${form}" method="post">
+                    <input hidden="hidden" th:name="ServiceName" th:value="${service.getName()}"/>
+                    <input type="submit"  th:value="${service.getName()}" class="btn btn-link text-link">
+                </form>
+
+            <td><span th:text="${service.systemName}">АС</span></td>
             <td><span th:text="${service.getCurrentDelay}">Задержка в мс</span></td>
             <td><span th:text="${service.timeout}">Timeout в мс</span></td>
             <td><span th:text="${service.schedulerDelay}">Scheduler</span></td>
@@ -33,6 +46,7 @@
         </tr>
         </tbody>
     </table>
+    <!--    <input type="button" name="update_btn" id="update_btn" value="Сервис" class="buttonBlack"/>-->
     <div class="div-btn">
         <input value="Изменить" type="button" onclick="location.href='/delay/edit'" class="buttonBlack"/>
         <input value="Добавить сервис" type="button" onclick="location.href='/services/add'" class="buttonBlack"/>
@@ -41,6 +55,29 @@
         <input value="Выкл сервисы" type="button" onclick="location.href='/delay/disableServices'" class="buttonBlack"/>
         <input value="Вкл сервисы" type="button" onclick="location.href='/delay/enableServices'" class="buttonBlack"/>
     </div>
+    <div class="version">Stub version: @project.version@</div>
+    <!--    </form>-->
 </div>
 </body>
+<!--<script>-->
+<!--    $('#save_btn').click(function () {-->
+<!--        var form = document.getElementById("myForm")-->
+<!--        form.action = "/services/save";-->
+<!--        form.submit();-->
+<!--    });-->
+<!--    $('#update_btn').click(function () {-->
+<!--        var form = document.getElementById("myForm")-->
+<!--        form.action = "/services/update";-->
+<!--        form.submit();-->
+<!--    });-->
+<!--</script>-->
+<script src="/datatables.min.js"></script>
+<script>
+let table = new DataTable('.table', {
+    searching: false,
+    paging: false,
+    info: false,
+    bAutoWidth: false
+});
+</script>
 </html>

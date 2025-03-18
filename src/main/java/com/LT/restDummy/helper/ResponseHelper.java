@@ -2,12 +2,13 @@ package com.LT.restDummy.helper;
 
 import com.LT.restDummy.date.DateModule;
 import com.LT.restDummy.exception.ServiceException;
-import com.LT.restDummy.influx.InfluxWriter;
-import com.LT.restDummy.servises.ResponseDelay;
 import com.LT.restDummy.servises.Service;
 import com.LT.restDummy.servises.ServiceMapper;
 import com.LT.restDummy.servises.ServiceValue;
 import com.LT.restDummy.servises.dto.ServiceRequestDto;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.JsonPath;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.json.simple.JSONObject;
@@ -37,6 +38,7 @@ public class ResponseHelper {
     private static final String DATA_FOR_RQUID = CHAR_LOWER_RQUID + CHAR_UPPER_RQUID + NUMBER;
     private static final String DATA_FOR_RANDOM_STRING = CHAR_LOWER + CHAR_UPPER;
     private static SecureRandom random = new SecureRandom();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     public static CompletableFuture<ResponseEntity<String>> returnResponse(String request, String serviceName,
                                                                            long delay,
@@ -61,13 +63,13 @@ public class ResponseHelper {
  */
             return ResponseDelay.scheduleResponse(ServiceValue.getInstance().getDelayByService(serviceName),
                     responseCorrelate(request,
-                            getResponseByPercent(ServiceValue.getInstance().getServiceByName(serviceName)),
+                            getResponseFromBunch(ServiceValue.getInstance().getServiceByName(serviceName), request),
                             ServiceValue.getInstance().getTypeByService(serviceName)),
-                    serviceName, setHeader(serviceName));
+                    serviceName, getHeader(serviceName));
         } else throw new ServiceException("Сервис временно недоступен. Включите заглушку");
     }
 
-    public static HttpHeaders setHeader(String serviceName) {
+    public static HttpHeaders getHeader(String serviceName) {
         HttpHeaders responseHeaders = new HttpHeaders();
 
         if (ServiceValue.getInstance().getTypeByService(serviceName).equalsIgnoreCase("json")) {
@@ -79,29 +81,86 @@ public class ResponseHelper {
     /**
      * Сортирует пороговые значения ответов по возрастанию, если рандомное число попадает в порог то отправляем ответ закрепленный за порогом
      */
-    public static String getResponseByPercent(Service service) {
-        int rand = 1 + (int) (Math.random() * 100);
+    public static String getResponseByPercent(Service service, int rand) {
+        int startNumThreshold = 0;
+        for (Integer endNumThreshold : service.getThresholds()) {
+            if (rand > startNumThreshold && rand <= endNumThreshold) {
+                return service.getResponse().get(endNumThreshold);
+            } else startNumThreshold = endNumThreshold;
+        }
+        return "Какой-то параметр указан не верно. Перепроверьте.";
+    }
+
+    public static String getResponseFromBunch(Service service, String request) {
         if (service.isPercentage()) {
-            int startNumThreshold = 0;
-            for (Integer endNumThreshold : service.getThresholds()) {
-                if (rand > startNumThreshold && rand <= endNumThreshold)
-                    return service.getResponse().get(endNumThreshold);
-                else startNumThreshold = endNumThreshold;
-            }
+            return getResponseByPercent(service, getPercent());
+        } else if (service.isChangeableParam()) {
+            return getResponseByParam(service, request);
         }
         return service.getResponse().get(-1);
     }
 
+    public static String getResponseByParam(Service service, String request) {
+        if (parameterCorrelate(request, service.getChangeableParamName(), service.getType())
+                .equals(service.getChangeableParamValue())) {
+            return service.getResponse().get(service.getChangeableParamResponse());
+        } else {
+            return service.getResponse().get(service.getChangeableDefaultResponse());
+        }
+    }
+
+    private static int getPercent() {
+        return 1 + (int) (Math.random() * 100);
+    }
+
+    /**
+     * Вынимает нужный параметр из запроса
+     */
     public static String parameterCorrelate(String request, String param, String type) {
-        request = request.toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
-        param = param.toLowerCase(Locale.ROOT);
+        request = request.replaceAll("\\s+", "");
+        String value = null;
         switch (type.toLowerCase(Locale.ROOT)) {
             case "xml":
-                return StringUtils.substringBetween(request, "<" + param + ">", "</" + param + ">");
+                value = StringUtils.substringBetween(request, "<" + param + ">", "</" + param + ">");
+                break;
             case "json":
-                return StringUtils.substringBetween(request, "\"" + param + "\":\"", "\"");
+                JSONObject jsonObject = null;
+                try {
+                    jsonObject = objectMapper.readValue(request, JSONObject.class);
+                } catch (JsonProcessingException e) {
+                    log.error("Заглушка не может распарсить входящий запрос как json.");
+                }
+                if (jsonObject != null) {
+                    if (jsonObject.containsKey(param)) {
+                        Object obj = jsonObject.get(param);
+                        return (obj instanceof List) ? String.valueOf(((List) obj).get(0)) : String.valueOf(obj);
+                    } else if (!JsonPath.parse(request).read("$.." + param).toString().isEmpty()) {
+                        List<String> arrayList = JsonPath.parse(request).read("$.." + param);
+                        try {
+                            if (arrayList.size() > 0) {
+                                value = arrayList.get(0);
+                            }
+                        } catch (Exception e) {
+                            try {
+                                List<Long> secondArrayList = JsonPath.parse(request).read("$.." + param);
+                                value = secondArrayList.get(0).toString();
+                            } catch (Exception ex) {
+                                List<Integer> secondArrayList = JsonPath.parse(request).read("$.." + param);
+                                value = secondArrayList.get(0).toString();
+                            }
+                        }
+                        break;
+                    }
+                } else {
+                    return "Проверьте соответствие type и входящего запроса. Заглушка не может распарсить входящий запрос как json.";
+                }
             default:
-                return "null";
+                return "У вас не указан type для сервиса или type не поддерживается";
+        }
+        if (value != null) {
+            return value;
+        } else {
+            return "Значение не найдено в запросе";
         }
     }
 
@@ -114,9 +173,7 @@ public class ResponseHelper {
             sb.append(rndChar);
         }
         return sb.toString();
-
     }
-
 
     public static String randomNumberAndChar(int length) {
         if (length < 1) throw new IllegalArgumentException();
@@ -155,11 +212,12 @@ public class ResponseHelper {
 
     public static String responseCorrelate(String request, String response, String type) {
 /**
- собираем все параметры, необходимые к замене
+ собираем все параметры, необходимые к замене в response
  */
+        response = searchParamWithValueInRequestForJson(response, request);
 
-        Matcher matcher = Pattern.compile("__([a-zA-Z0-9<>]+)__").matcher(response);
-        ArrayList<String> params = new ArrayList<>();
+        Matcher matcher = Pattern.compile("__([a-zA-Z0-9<>_]+)__").matcher(response);
+        List<String> params = new ArrayList<>();
         while (matcher.find()) {
             params.add(matcher.group(1));
         }
@@ -167,20 +225,24 @@ public class ResponseHelper {
         Pattern patternResponse;
         for (String param : params) {
 /**
- Заменяем найденную подстроку на значение из запроса или текущее время
+ Заменяем найденную подстроку на рандомное значение или текущее время в ответе
  */
             if (param.equalsIgnoreCase("rqtm") || param.equalsIgnoreCase("rstm")) {
                 response = StringUtils.replace(response, "__" + param + "__", DateModule.get_date_now());
-            } else if (param.toLowerCase(Locale.ROOT).contains("getnewrquid")) {
+            }
+            if (param.toLowerCase(Locale.ROOT).contains("getnewrquid")) {
                 int num = Integer.parseInt(StringUtils.substringBetween(param, "<", ">"));
                 response = StringUtils.replace(response, "__" + param + "__", randomRqUID(num));
-            }else if (param.toLowerCase(Locale.ROOT).contains("rndnumchar")) {
+            }
+            if (param.toLowerCase(Locale.ROOT).contains("rndnumchar")) {
                 int num = Integer.parseInt(StringUtils.substringBetween(param, "<", ">"));
                 response = StringUtils.replace(response, "__" + param + "__", randomNumberAndChar(num));
-            } else if (param.toLowerCase(Locale.ROOT).contains("rndnum")) {
+            }
+            if (param.toLowerCase(Locale.ROOT).contains("rndnum")) {
                 int num = Integer.parseInt(StringUtils.substringBetween(param, "<", ">"));
                 response = StringUtils.replace(response, "__" + param + "__", randomNumber(num));
-            } else if (param.toLowerCase(Locale.ROOT).contains("rndchar")) {
+            }
+            if (param.toLowerCase(Locale.ROOT).contains("rndchar")) {
                 int num = Integer.parseInt(StringUtils.substringBetween(param, "<", ">"));
                 response = StringUtils.replace(response, "__" + param + "__", randomChar(num));
             }
@@ -189,11 +251,13 @@ public class ResponseHelper {
  */
             switch (type) {
                 case "xml":
-                    patternResponse = Pattern.compile("<" + param + ">(__[a-zA-Z0-9]*__)<");
+                    patternResponse = Pattern.compile("<" + param + ">(__[a-zA-Z0-9_]*__)<");
                     break;
                 case "json":
                 default:
-                    patternResponse = Pattern.compile("\"" + param + "\":\"(__[a-zA-Z0-9]*__)\"");
+
+//                    patternResponse = Pattern.compile("\"(?i).*" + param + ".*(__[a-zA-Z0-9_]*__)");
+                    patternResponse = Pattern.compile("(__" + param + "__)");
                     break;
             }
             Matcher matcherResponse = patternResponse.matcher(response);
@@ -204,13 +268,50 @@ public class ResponseHelper {
         return response;
     }
 
+    public static String searchParamWithValueInRequestForJson(String response, String request) {
+        Matcher matcher = Pattern.compile("___([a-zA-Z0-9<>_]+)___").matcher(response);
+        Matcher matcher2 = Pattern.compile("_-_([a-zA-Z0-9<>_]+)_-_").matcher(response);
+        List<String> params = new ArrayList<>();
+        while (matcher.find()) {
+            params.add(matcher.group(1));
+        }
+        List<String> params2 = new ArrayList<>();
 
-    public static JSONObject getServices() {
+        while (matcher2.find()) {
+            params2.add(matcher2.group(1));
+        }
+        for (String param : params) {
+            Pattern patternResponse = Pattern.compile("\"" + param + ".*(___[a-zA-Z0-9_]*___)");
+            Matcher matcherResponse = patternResponse.matcher(response);
+            while (matcherResponse.find()) {
+                request = request.toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
+                param = param.toLowerCase(Locale.ROOT);
+                response = StringUtils.replace(response,
+                        matcherResponse.group(1),
+                        StringUtils.substringBetween(request, "\"parameter\":\"" + param + "\",\"value\":\"", "\""));
+            }
+        }
+        for (String param : params2) {
+            Pattern patternResponse = Pattern.compile(".*(_-_[a-zA-Z0-9_]*_-_)");
+            Matcher matcherResponse = patternResponse.matcher(response);
+            while (matcherResponse.find()) {
+                request = request.toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
+                param = param.toLowerCase(Locale.ROOT);
+                response = StringUtils.replace(response,
+                        matcherResponse.group(1),
+                        StringUtils.substringBetween(request, "\"" + param + "\":{\"value\":\"", "\""));
+            }
+        }
+        return response;
+    }
+
+    public static JSONObject getServices(String version) {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("success", true);
         jsonObject.put("services", ServiceValue.getInstance().getServicesArray().
                 stream().map(ServiceMapper::serviceToDto)
                 .collect(Collectors.toList()));
+        jsonObject.put("version", version);
         return jsonObject;
     }
 
@@ -223,5 +324,4 @@ public class ResponseHelper {
         return jsonObject;
 
     }
-
 }

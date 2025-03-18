@@ -11,9 +11,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 
 /**
-Класс каждые 60с делает проверку текущего времени и времени задержки,
-если оно совпадает - выставляется задержка или выключается сервис
-*/
+ * Класс каждые 60с делает проверку текущего времени и времени задержки,
+ * если оно совпадает - выставляется задержка или выключается сервис
+ */
 @Component
 public class Scheduler {
     protected static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
@@ -24,15 +24,15 @@ public class Scheduler {
     }
 
     @SneakyThrows
-    @Scheduled(fixedRate = 60000) // как часто проверка(1 мин)
+    @Scheduled(fixedRate = 60000)// как часто проверка(1 мин)
     public void schedulingAvailability() {
         boolean isScheduledAvailability = false;
         LocalDateTime now = LocalDateTime.parse(LocalDateTime.now().format(DATE_TIME_FORMATTER), DATE_TIME_FORMATTER);
         HashMap<String, Boolean> servicesStop = new HashMap<>();
 /**
-            Проверка на соответствие текущего времени и времени остановки сервиса, если хоть один соответствует,
-            то он останавливается и время шедулится на 10минут
-*/
+ Проверка на соответствие текущего времени и времени остановки сервиса, если хоть один соответствует,
+ то он останавливается и время шедулится на 10минут
+ */
         for (Service service : serviceValue.getServices().values()) {
             if (service.getAvailabilityScheduler().isEqual(now)) {
                 servicesStop.put(service.getName(), true);
@@ -64,9 +64,9 @@ public class Scheduler {
         HashMap<String, Boolean> servicesDelay = new HashMap<>();
 
 /**
-            Проверка на соответствие текущего времени и времени остановки сервиса, если хоть один соответствует,
-            то он останавливается и время шедулится на 10минут
-*/
+ Проверка на соответствие текущего времени и времени остановки сервиса, если хоть один соответствует,
+ то он останавливается и время шедулится на 10минут
+ */
         for (Service service : serviceValue.getServices().values()) {
             if (service.getSchedulerToDelay().isEqual(now)) {
                 servicesDelay.put(service.getName(), true);
@@ -92,4 +92,3 @@ public class Scheduler {
 
     }
 }
-

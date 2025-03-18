@@ -21,6 +21,7 @@
             <thead class="thead-dark">
             <tr>
                 <th>Сервис</th>
+                <th>АС</th>
                 <th>текущая задержка в мс</th>
                 <th>Timeout</th>
                 <th>Задержка для Scheduler</th>
@@ -38,6 +39,7 @@
                            th:value="${service.getName()}"/>
                     <span th:text="${service.getName()}"/>
                 </td>
+                <td><span th:text="${service.systemName}">АС</span></td>
                 <td>
                     <input type="number" id="form12" class="form-control" min="0"
                            th:name="|viewData[${itemStat.index}].currentDelay|"

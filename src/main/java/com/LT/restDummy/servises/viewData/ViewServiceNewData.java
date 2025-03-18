@@ -13,6 +13,6 @@ import lombok.NoArgsConstructor;
 public class ViewServiceNewData {
     private String serviceName;
     private String content;
-
-
+    private String params;
+    private String systemName;
 }

@@ -1,13 +1,24 @@
-
 .table {
     font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif;
     border-collapse: collapse;
     text-align: center;
     width: 80%;
     margin: auto;
-
 }
 
+.version {
+    font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif;
+    font-size: smaller;
+    border-collapse: collapse;
+    text-align: center;
+    width: 80%;
+    margin: auto;
+    margin-top: 5%;
+}
+
+form input[type="submit"] {
+    user-select: text;
+}
 
 th {
     border-bottom: 3px solid #B9B29F;
@@ -18,7 +29,6 @@ td {
     padding: 10px;
 }
 
-
 tr:nth-child(odd) {
     background: white;
 }
@@ -27,7 +37,12 @@ tr:nth-child(even) {
     background: #e9ecef;
 }
 
-.text-grey{
+.text-link {
+    font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif;
+    color:black;
+}
+
+.text-grey {
     color: #6d757d;
 }
 
@@ -48,7 +63,6 @@ tr:nth-child(even) {
 .div-btn-submit {
     padding-top: 10px;
     text-align: center;
-
 
 }
 
@@ -75,7 +89,6 @@ caption {
     text-align: left;
     font-weight: bold;
 }
-
 
 .form-control {
     font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif;

@@ -24,4 +24,5 @@ public class ServiceRequestDto {
     @SerializedName("available")
     @Expose
     private boolean available;
+    private String systemName;
 }

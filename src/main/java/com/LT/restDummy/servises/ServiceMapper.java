@@ -14,12 +14,20 @@ public class ServiceMapper {
                 service.getDefaultDelay(),
                 service.getCurrentDelay(),
                 service.getTimeout(),
-                service.isAvailable());
+                service.isAvailable(),
+                service.getSystemName());
     }
 
     public static Service dtoToService(ServiceRequestDto serviceRequestDto) {
-        return new Service(serviceRequestDto.getName(),
-                serviceRequestDto.getDelay(),
-                serviceRequestDto.isAvailable());
+        if (serviceRequestDto.getSystemName() != null)
+            return new Service(serviceRequestDto.getName(),
+                    serviceRequestDto.getDelay(),
+                    serviceRequestDto.isAvailable(),
+                    serviceRequestDto.getSystemName());
+        else {
+            return new Service(serviceRequestDto.getName(),
+                    serviceRequestDto.getDelay(),
+                    serviceRequestDto.isAvailable());
+        }
     }
 }

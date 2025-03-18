@@ -1,8 +1,8 @@
 package com.LT.restDummy.servises.viewData;
 
 /**
-Необходим для отображения через GUI
-*/
+ * Необходим для отображения через GUI
+ */
 
 import lombok.Getter;
 import lombok.Setter;
@@ -17,8 +17,9 @@ public class ViewServiceData {
     private String schedulerDelay;
     private Boolean isAvailable;
     private String schedulerAvailability;
+    private String systemName;
 
-    public ViewServiceData(String name, Long currentDelay, Long timeout, Long delayForScheduler, String schedulerDelay, Boolean isAvailable, String schedulerAvailability) {
+    public ViewServiceData(String name, Long currentDelay, Long timeout, Long delayForScheduler, String schedulerDelay, Boolean isAvailable, String schedulerAvailability, String systemName) {
         this.name = name;
         this.currentDelay = currentDelay;
         this.timeout = timeout;
@@ -26,6 +27,8 @@ public class ViewServiceData {
         this.schedulerDelay = schedulerDelay;
         this.isAvailable = isAvailable;
         this.schedulerAvailability = schedulerAvailability;
+        this.systemName = systemName;
+
     }
 
     //    Не удалять. Без него ломается HTML
