@@ -1,8 +1,7 @@
 package com.LT.restDummy.controller;
 
 import com.LT.restDummy.helper.ResponseHelper;
-import com.LT.restDummy.servises.dto.ServicesDto;
-import com.LT.restDummy.victoria.VictoriaWriter;
+import com.LT.restDummy.domain.dto.ServicesDto;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 //import org.influxdb.InfluxDB;

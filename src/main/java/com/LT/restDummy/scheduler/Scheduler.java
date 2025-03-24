@@ -1,7 +1,7 @@
 package com.LT.restDummy.scheduler;
 
-import com.LT.restDummy.servises.Service;
-import com.LT.restDummy.servises.ServiceValue;
+import com.LT.restDummy.domain.model.Service;
+import com.LT.restDummy.service.ServiceValue;
 import lombok.SneakyThrows;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -33,7 +33,7 @@ public class Scheduler {
  Проверка на соответствие текущего времени и времени остановки сервиса, если хоть один соответствует,
  то он останавливается и время шедулится на 10минут
  */
-        for (Service service : serviceValue.getServices().values()) {
+        for (Service service : serviceValue.registry().getAll()) {
             if (service.getAvailabilityScheduler().isEqual(now)) {
                 servicesStop.put(service.getName(), true);
                 isScheduledAvailability = true;
@@ -43,14 +43,14 @@ public class Scheduler {
         }
         for (String service : servicesStop.keySet()) {
             if (servicesStop.get(service)) {
-                serviceValue.setAvailabilityToService(service, false);
+                serviceValue.availability().setAvailable(service, false);
             }
         }
         if (isScheduledAvailability) {
             Thread.sleep(600000); // - 10 мин
             for (String service : servicesStop.keySet()) {
                 if (servicesStop.get(service)) {
-                    serviceValue.setAvailabilityToService(service, true);
+                    serviceValue.availability().setAvailable(service, true);
                 }
             }
         }
@@ -67,8 +67,8 @@ public class Scheduler {
  Проверка на соответствие текущего времени и времени остановки сервиса, если хоть один соответствует,
  то он останавливается и время шедулится на 10минут
  */
-        for (Service service : serviceValue.getServices().values()) {
-            if (service.getSchedulerToDelay().isEqual(now)) {
+        for (Service service : serviceValue.registry().getAll()) {
+            if (service.getDelayConfig().getSchedulerToDelay().isEqual(now)) {
                 servicesDelay.put(service.getName(), true);
                 isScheduledDelay = true;
             } else {
@@ -78,14 +78,14 @@ public class Scheduler {
 
         for (String service : servicesDelay.keySet()) {
             if (servicesDelay.get(service)) {
-                serviceValue.setNewDelayToService(service, ServiceValue.getInstance().getDelayForSchedulerByService(service));
+                serviceValue.delay().setDelay(service, ServiceValue.getInstance().delay().getDelayForScheduler(service));
             }
         }
         if (isScheduledDelay) {
             Thread.sleep(600000); // - 10 мин
             for (String service : servicesDelay.keySet()) {
                 if (servicesDelay.get(service)) {
-                    serviceValue.setNewDelayToService(service, ServiceValue.getInstance().getServiceDefaultDelay(service));
+                    serviceValue.delay().setDelay(service, ServiceValue.getInstance().delay().getDefaultDelay(service));
                 }
             }
         }
