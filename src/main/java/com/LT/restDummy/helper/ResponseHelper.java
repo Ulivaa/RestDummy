@@ -2,10 +2,12 @@ package com.LT.restDummy.helper;
 
 import com.LT.restDummy.date.DateModule;
 import com.LT.restDummy.exception.ServiceException;
-import com.LT.restDummy.servises.Service;
-import com.LT.restDummy.servises.ServiceMapper;
-import com.LT.restDummy.servises.ServiceValue;
-import com.LT.restDummy.servises.dto.ServiceRequestDto;
+import com.LT.restDummy.domain.model.Service;
+import com.LT.restDummy.service.ServiceMapper;
+import com.LT.restDummy.service.ServiceValue;
+import com.LT.restDummy.domain.dto.ServiceRequestDto;
+import com.LT.restDummy.domain.response.ResponseResolver;
+import com.LT.restDummy.domain.response.StubResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
@@ -43,31 +45,59 @@ public class ResponseHelper {
     public static CompletableFuture<ResponseEntity<String>> returnResponse(String request, String serviceName,
                                                                            long delay,
                                                                            Boolean isAvailable) {
-        log.info("REQUEST: " + request);
+        log.info("=== Обработка запроса к сервису: {} ===", serviceName);
+        log.info("REQUEST BODY:\n{}", request);
 
-/**
- * Если параметры заданы, то обновляем их
- */
+        ServiceValue serviceValue = ServiceValue.getInstance();
+
+        /**
+         * Если параметры заданы, то обновляем их
+         */
         if (delay != 0) {
-            ServiceValue.getInstance().setNewDelayToService(serviceName, delay);
+            serviceValue.delay().setDelay(serviceName, delay);
+            log.info("⏱ Установлена новая задержка: {} мс", delay);
         }
         if (isAvailable != null) {
-            ServiceValue.getInstance().setAvailabilityToService(serviceName, isAvailable);
+            serviceValue.availability().setAvailable(serviceName, isAvailable);
+            log.info("🔁 Доступность сервиса обновлена: {}", isAvailable);
         }
-/**
- Если сервис доступен, то возвращаем его
- */
-        if (ServiceValue.getInstance().getAvailabilityByService(serviceName)) {
-/**
- передаем параметры для задержки: секунды, закоррелированный ответ и сервис
- */
-            return ResponseDelay.scheduleResponse(ServiceValue.getInstance().getDelayByService(serviceName),
-                    responseCorrelate(request,
-                            getResponseFromBunch(ServiceValue.getInstance().getServiceByName(serviceName), request),
-                            ServiceValue.getInstance().getTypeByService(serviceName)),
-                    serviceName, getHeader(serviceName));
-        } else throw new ServiceException("Сервис временно недоступен. Включите заглушку");
+
+        /**
+         * Если сервис доступен, то возвращаем его
+         */
+        if (serviceValue.availability().isAvailable(serviceName)) {
+
+            // Получаем сервис и тип запроса (json/xml)
+            Service service = serviceValue.registry().get(serviceName);
+            String type = service.getType();
+
+            log.info("📦 Тип логики ответа: {}", service.getResponseType());
+
+            /**
+             * Получаем сгенерированный ответ с учётом параметров, трешхолдов или дефолта
+             */
+            StubResponse response = ResponseResolver.resolve(service, request);
+
+            log.info("✅ Выбран ответ: [type={}, key={}, paramName={}, paramValue={}]",
+                    response.getType(),
+                    response.getKey(),
+                    response.getParamName(),
+                    response.getParamValue());
+
+            /**
+             * Передаем параметры для задержки: секунды, закоррелированный ответ и сервис
+             */
+            return ResponseDelay.scheduleResponse(
+                    serviceValue.delay().getDelay(serviceName),
+                    responseCorrelate(request, response.getContent(), type),
+                    serviceName,
+                    getHeader(serviceName)
+            );
+        } else {
+            throw new ServiceException("Сервис временно недоступен. Включите заглушку");
+        }
     }
+
 
     public static HttpHeaders getHeader(String serviceName) {
         HttpHeaders responseHeaders = new HttpHeaders();
@@ -81,37 +111,37 @@ public class ResponseHelper {
     /**
      * Сортирует пороговые значения ответов по возрастанию, если рандомное число попадает в порог то отправляем ответ закрепленный за порогом
      */
-    public static String getResponseByPercent(Service service, int rand) {
-        int startNumThreshold = 0;
-        for (Integer endNumThreshold : service.getThresholds()) {
-            if (rand > startNumThreshold && rand <= endNumThreshold) {
-                return service.getResponse().get(endNumThreshold);
-            } else startNumThreshold = endNumThreshold;
-        }
-        return "Какой-то параметр указан не верно. Перепроверьте.";
-    }
+//    public static String getResponseByPercent(Service service, int rand) {
+//        int startNumThreshold = 0;
+//        for (Integer endNumThreshold : service.getThresholds()) {
+//            if (rand > startNumThreshold && rand <= endNumThreshold) {
+//                return service.getResponse().get(endNumThreshold);
+//            } else startNumThreshold = endNumThreshold;
+//        }
+//        return "Какой-то параметр указан не верно. Перепроверьте.";
+//    }
 
-    public static String getResponseFromBunch(Service service, String request) {
-        if (service.isPercentage()) {
-            return getResponseByPercent(service, getPercent());
-        } else if (service.isChangeableParam()) {
-            return getResponseByParam(service, request);
-        }
-        return service.getResponse().get(-1);
-    }
+//    public static String getResponseFromBunch(Service service, String request) {
+//        if (service.isPercentage()) {
+//            return getResponseByPercent(service, getPercent());
+//        } else if (service.isChangeableParam()) {
+//            return getResponseByParam(service, request);
+//        }
+//        return service.getResponse().get(-1);
+//    }
 
-    public static String getResponseByParam(Service service, String request) {
-        if (parameterCorrelate(request, service.getChangeableParamName(), service.getType())
-                .equals(service.getChangeableParamValue())) {
-            return service.getResponse().get(service.getChangeableParamResponse());
-        } else {
-            return service.getResponse().get(service.getChangeableDefaultResponse());
-        }
-    }
+//    public static String getResponseByParam(Service service, String request) {
+//        if (parameterCorrelate(request, service.getChangeableParamName(), service.getType())
+//                .equals(service.getChangeableParamValue())) {
+//            return service.getResponse().get(service.getChangeableParamResponse());
+//        } else {
+//            return service.getResponse().get(service.getChangeableDefaultResponse());
+//        }
+//    }
 
-    private static int getPercent() {
-        return 1 + (int) (Math.random() * 100);
-    }
+//    private static int getPercent() {
+//        return 1 + (int) (Math.random() * 100);
+//    }
 
     /**
      * Вынимает нужный параметр из запроса
@@ -308,7 +338,7 @@ public class ResponseHelper {
     public static JSONObject getServices(String version) {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("success", true);
-        jsonObject.put("services", ServiceValue.getInstance().getServicesArray().
+        jsonObject.put("services", ServiceValue.getInstance().registry().getAll().
                 stream().map(ServiceMapper::serviceToDto)
                 .collect(Collectors.toList()));
         jsonObject.put("version", version);

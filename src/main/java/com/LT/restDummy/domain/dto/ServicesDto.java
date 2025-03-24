@@ -1,4 +1,4 @@
-package com.LT.restDummy.servises.dto;
+package com.LT.restDummy.domain.dto;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;

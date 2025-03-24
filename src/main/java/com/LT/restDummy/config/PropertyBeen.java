@@ -1,8 +1,8 @@
 package com.LT.restDummy.config;
 
-import com.LT.restDummy.file.FileWork;
-import com.LT.restDummy.servises.Service;
-import com.LT.restDummy.servises.ServiceValue;
+import com.LT.restDummy.file.ServiceFileHandler;
+import com.LT.restDummy.domain.model.Service;
+import com.LT.restDummy.service.ServiceValue;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.connector.Connector;
@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 @PropertySource("file:properties")
 @PropertySource("file:servicesParams.properties")
 public class PropertyBeen {
-    List<String> allFiles = FileWork.getListFilesForFolder(new File("services"));
+    List<String> allFiles = ServiceFileHandler.getListFilesForFolder(new File("services"));
 
     @SneakyThrows
     @Bean("Services")
@@ -45,9 +45,9 @@ public class PropertyBeen {
             String fileContent = reader.lines().collect(Collectors.joining(System.lineSeparator()));
             String endpoint = properties.getProperty(fileName + ".endpoint");
             if (endpoint != null) {
-                services.put(endpoint, FileWork.getService(fileName, fileContent));
+                services.put(endpoint, ServiceFileHandler.getService(fileName, fileContent));
             } else {
-                services.put(fileName, FileWork.getService(fileName, fileContent));
+                services.put(fileName, ServiceFileHandler.getService(fileName, fileContent));
             }
         }
         return ServiceValue.getInstance().initialize(services);

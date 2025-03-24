@@ -1,6 +1,6 @@
 //package com.LT.restDummy.config;
 //
-//import com.LT.restDummy.file.FileWork;
+//import com.LT.restDummy.file.ServiceFileHandler;
 //import com.LT.restDummy.influx.InfluxConnect;
 //import com.LT.restDummy.influx.InfluxWriter;
 //import lombok.extern.slf4j.Slf4j;
@@ -49,9 +49,9 @@
 //        InfluxConnect influxConnect = new InfluxConnect();
 //        influxConnect.setDb(db);
 //        influxConnect.setRetentionPolicy(retentionpolicy);
-//        influxConnect.setSubsystem(FileWork.getInfluxProperty().getOrDefault("subsystem", "CREATE_SUBSYSTEM").toString());
+//        influxConnect.setSubsystem(ServiceFileHandler.getInfluxProperty().getOrDefault("subsystem", "CREATE_SUBSYSTEM").toString());
 //        influxConnect.setBlock(block);
-//        influxConnect.setChanel(FileWork.getInfluxProperty().getOrDefault("influxdb.chanel", "SBOL").toString());
+//        influxConnect.setChanel(ServiceFileHandler.getInfluxProperty().getOrDefault("influxdb.chanel", "SBOL").toString());
 //        return influxConnect;
 //    }
 //}

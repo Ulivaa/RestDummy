@@ -1,4 +1,4 @@
-package com.LT.restDummy.servises.viewData;
+package com.LT.restDummy.viewData;
 
 /**
  * Необходим для отображения через GUI
