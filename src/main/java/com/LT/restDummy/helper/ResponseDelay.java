@@ -1,7 +1,5 @@
 package com.LT.restDummy.helper;
 
-//import com.LT.restDummy.influx.InfluxWriter;
-
 import com.LT.restDummy.victoria.VictoriaWriter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;

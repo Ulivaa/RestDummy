@@ -1,6 +1,6 @@
 package com.LT.restDummy.file;
 
-import com.LT.restDummy.domain.model.Service;
+import com.LT.restDummy.domain.model.StubService;
 import com.LT.restDummy.service.ServiceValue;
 import com.LT.restDummy.domain.delay.DelayConfig;
 import com.LT.restDummy.domain.response.ResponseBuilder;
@@ -72,13 +72,13 @@ public class ServiceFileHandler {
     // ===========================
 
     /**
-     * Загружает параметры для конкретного сервиса из файла `servicesParams.properties` и формирует объект {@link Service}.
+     * Загружает параметры для конкретного сервиса из файла `servicesParams.properties` и формирует объект {@link StubService}.
      *
      * @param name    имя сервиса
      * @param content содержимое файла заглушки
-     * @return сконфигурированный {@link Service}
+     * @return сконфигурированный {@link StubService}
      */
-    public static Service getService(String name, String content) {
+    public static StubService getService(String name, String content) {
         Properties properties = readPropertiesFile(PARAMS_FILE);
 
         HashMap<String, String> params = new HashMap<>();
@@ -94,15 +94,15 @@ public class ServiceFileHandler {
     }
 
     /**
-     * Создаёт объект {@link Service} на основе имени, содержимого заглушки и переданных параметров.
+     * Создаёт объект {@link StubService} на основе имени, содержимого заглушки и переданных параметров.
      *
      * @param name    имя сервиса
      * @param content содержимое файла заглушки
      * @param params  параметры сервиса, извлечённые из .properties
-     * @return готовый {@link Service}
+     * @return готовый {@link StubService}
      */
-    public static Service getService(String name, String content, HashMap<String, String> params) {
-        Service service = new Service();
+    public static StubService getService(String name, String content, HashMap<String, String> params) {
+        StubService service = new StubService();
         service.setName(name);
         service.setFullServiceFile(content);
 
@@ -126,7 +126,7 @@ public class ServiceFileHandler {
         service.setDelayConfig(delayConfig);
 
         // 🕒 Дата доступности
-        service.setAvailabilityScheduler(Service.DEFAULT_DATE);
+        service.setAvailabilityScheduler(StubService.DEFAULT_DATE);
 
         return service;
     }

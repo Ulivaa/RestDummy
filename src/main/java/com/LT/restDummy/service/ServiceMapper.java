@@ -1,7 +1,7 @@
 package com.LT.restDummy.service;
 
 import com.LT.restDummy.domain.dto.ServiceRequestDto;
-import com.LT.restDummy.domain.model.Service;
+import com.LT.restDummy.domain.model.StubService;
 
 public class ServiceMapper {
     ServiceValue serviceValue;
@@ -10,7 +10,7 @@ public class ServiceMapper {
         this.serviceValue = serviceValue;
     }
 
-    public static ServiceRequestDto serviceToDto(Service service) {
+    public static ServiceRequestDto serviceToDto(StubService service) {
         return new ServiceRequestDto(
                 service.getName(),
                 service.getDelayConfig().getDefaultDelay(),
@@ -21,8 +21,8 @@ public class ServiceMapper {
         );
     }
 
-    public static Service dtoToService(ServiceRequestDto dto) {
-        return new Service(
+    public static StubService dtoToService(ServiceRequestDto dto) {
+        return new StubService(
                 dto.getName(),
                 dto.getDelay(),    // используется и как delay, и как defaultDelay
                 dto.getTimeout(),

@@ -13,7 +13,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-public class Service {
+public class StubService {
     public static final LocalDateTime DEFAULT_DATE = LocalDateTime.of(2000, 1, 1, 1, 1);
 
     private String name;
@@ -31,13 +31,13 @@ public class Service {
     private List<StubResponse> responses;
     private ResponseType responseType;
 
-    public Service(String name, Long defaultDelay, Long timeout, boolean available) {
+    public StubService(String name, Long defaultDelay, Long timeout, boolean available) {
         this.name = name;
         this.delayConfig = new DelayConfig(defaultDelay, timeout);
         this.available = available;
     }
 
-    public Service(String name, Long defaultDelay, Long timeout, boolean available, String systemName) {
+    public StubService(String name, Long defaultDelay, Long timeout, boolean available, String systemName) {
         this(name, defaultDelay, timeout, available);
         this.systemName = systemName;
     }

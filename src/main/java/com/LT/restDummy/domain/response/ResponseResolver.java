@@ -1,7 +1,7 @@
 package com.LT.restDummy.domain.response;
 
-import com.LT.restDummy.helper.ResponseHelper;
-import com.LT.restDummy.domain.model.Service;
+import com.LT.restDummy.domain.model.StubService;
+import com.LT.restDummy.util.JsonXmlParamExtractor;
 
 import java.util.List;
 import java.util.Random;
@@ -10,7 +10,7 @@ public class ResponseResolver {
 
     private static final Random random = new Random();
 
-    public static StubResponse resolve(Service service, String request) {
+    public static StubResponse resolve(StubService service, String request) {
         List<StubResponse> responses = service.getResponses();
 
         if (responses == null || responses.isEmpty()) {
@@ -39,7 +39,7 @@ public class ResponseResolver {
 
                     String paramName = r.getParamName();
                     String expectedValue = r.getParamValue();
-                    String actualValue = ResponseHelper.parameterCorrelate(request, paramName,service.getType());
+                    String actualValue = JsonXmlParamExtractor.extract(request, paramName,service.getType());
 
                     if (expectedValue != null && expectedValue.equals(actualValue)) {
                         return r; // Совпадение параметра — возвращаем целевой ответ

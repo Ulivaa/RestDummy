@@ -1,10 +1,10 @@
 package com.LT.restDummy.controller;
 
-import com.LT.restDummy.helper.ResponseHelper;
 import com.LT.restDummy.domain.dto.ServicesDto;
+import com.LT.restDummy.service.ResponseHandlerService;
+import com.LT.restDummy.service.ServiceManagementService;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
-//import org.influxdb.InfluxDB;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,12 +20,15 @@ import java.util.concurrent.CompletableFuture;
 @RestController
 public class RestDummyController {
 
-    //    public final InfluxDB influxDB;
+    private final ResponseHandlerService responseHandlerService;
+    private final ServiceManagementService serviceManagementService;
     private String version;
 
     public RestDummyController(
 //            InfluxDB influxDB,
-            @Value("${application-version}") String version) {
+            ResponseHandlerService responseHandlerService, ServiceManagementService serviceManagementService, @Value("${application-version}") String version) {
+        this.responseHandlerService = responseHandlerService;
+        this.serviceManagementService = serviceManagementService;
 //        this.influxDB = influxDB;
         this.version = version;
     }
@@ -35,7 +38,7 @@ public class RestDummyController {
                                                                  @RequestParam String service,
                                                                  @RequestParam(defaultValue = "0") Long delay,
                                                                  @RequestParam(required = false) Boolean isAvailable) {
-        return ResponseHelper.returnResponse(request, service, delay, isAvailable);
+        return responseHandlerService.handle(request, service, delay, isAvailable);
     }
 
     @PostMapping("/customEndpoint/**")
@@ -48,7 +51,7 @@ public class RestDummyController {
         if (request == null) {
             request = "";
         }
-        return ResponseHelper.returnResponse(request, path, delay, isAvailable);
+        return responseHandlerService.handle(request, path, delay, isAvailable);
     }
 //TODO
 //    "/customEndpoint/**"
@@ -57,7 +60,7 @@ public class RestDummyController {
 //                                                                                required = false Boolean isAvailable,
 //                                                                                HttpServletRequest httpServletRequest) {
 //        String path = httpServletRequest.getRequestURI().replaceAll("/customEndpoint", "");
-//        return ResponseHelper.returnResponse("", path, delay, isAvailable);
+//        return responseHandlerService.handle("", path, delay, isAvailable);
 //    }
 
     @GetMapping("/customEndpoint/**")
@@ -66,19 +69,19 @@ public class RestDummyController {
             @RequestParam(required = false) Boolean isAvailable,
             HttpServletRequest httpServletRequest) {
         String path = httpServletRequest.getRequestURI().replaceAll("/customEndpoint", "");
-        return ResponseHelper.returnResponse("", path, delay, isAvailable);
+        return responseHandlerService.handle("", path, delay, isAvailable);
     }
 
     @GetMapping("/getServices")
     public ResponseEntity<?> getServices() {
-        return ResponseEntity.ok(ResponseHelper.getServices(version));
+        return ResponseEntity.ok(serviceManagementService.getServices(version));
     }
 
     @PostMapping("/editServices")
     public ResponseEntity<?> editServices(@RequestBody String object) {
         Gson gson = new Gson();
         ServicesDto servicesDto = gson.fromJson(object, ServicesDto.class);
-        return ResponseEntity.ok(ResponseHelper.editServices(servicesDto.getServices()));
+        return ResponseEntity.ok(serviceManagementService.editServices(servicesDto.getServices()));
     }
 
     @GetMapping("/version")

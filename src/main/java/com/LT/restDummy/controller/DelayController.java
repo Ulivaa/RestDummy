@@ -1,7 +1,7 @@
 package com.LT.restDummy.controller;
 
+import com.LT.restDummy.domain.model.StubService;
 import com.LT.restDummy.file.ServiceFileHandler;
-import com.LT.restDummy.domain.model.Service;
 import com.LT.restDummy.service.ServiceValue;
 import com.LT.restDummy.viewData.ViewServiceData;
 import com.LT.restDummy.viewData.ViewServiceDataDTO;
@@ -107,7 +107,7 @@ public class DelayController {
 
         String serviceName = params.getOrDefault("endpoint", viewData.getServiceName());
 
-        Service service = ServiceFileHandler.getService(viewData.getServiceName(), viewData.getContent(), new HashMap<>(params));
+        StubService service = ServiceFileHandler.getService(viewData.getServiceName(), viewData.getContent(), new HashMap<>(params));
         serviceValue.registry().register(serviceName, service);
         ServiceFileHandler.updateFilesServices(viewData.getServiceName(), viewData.getContent(), viewData.getParams());
 
@@ -116,7 +116,7 @@ public class DelayController {
 
     @RequestMapping("/services/update")
     public String updateForm(@ModelAttribute("viewServiceNewData") ViewServiceNewData viewData, Model model) {
-        Service service = serviceValue.registry().get(viewData.getServiceName());
+        StubService service = serviceValue.registry().get(viewData.getServiceName());
         StringBuilder params = new StringBuilder();
 
         params.append(service.getName()).append(".type=").append(service.getType()).append("\n");

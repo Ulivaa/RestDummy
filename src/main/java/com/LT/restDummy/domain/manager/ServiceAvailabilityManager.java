@@ -1,6 +1,6 @@
 package com.LT.restDummy.domain.manager;
 
-import com.LT.restDummy.domain.model.Service;
+import com.LT.restDummy.domain.model.StubService;
 
 import java.time.LocalDateTime;
 
@@ -21,7 +21,7 @@ public class ServiceAvailabilityManager {
     }
 
     public void setAvailableToAll(boolean available) {
-        for (Service s : registry.getAll()) {
+        for (StubService s : registry.getAll()) {
             s.setAvailable(available);
         }
     }

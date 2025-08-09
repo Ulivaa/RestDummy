@@ -1,7 +1,7 @@
 package com.LT.restDummy.config;
 
+import com.LT.restDummy.domain.model.StubService;
 import com.LT.restDummy.file.ServiceFileHandler;
-import com.LT.restDummy.domain.model.Service;
 import com.LT.restDummy.service.ServiceValue;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +37,7 @@ public class PropertyBeen {
     @SneakyThrows
     @Bean("Services")
     public ServiceValue getFileServices() {
-        HashMap<String, Service> services = new HashMap<>();
+        HashMap<String, StubService> services = new HashMap<>();
         Properties properties = new Properties();
         properties.load(new FileInputStream("servicesParams.properties"));
         for (String fileName : allFiles) {

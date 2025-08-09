@@ -1,6 +1,6 @@
 package com.LT.restDummy.file;
 
-import com.LT.restDummy.domain.model.Service;
+import com.LT.restDummy.domain.model.StubService;
 import com.LT.restDummy.domain.response.ResponseType;
 import org.junit.jupiter.api.Test;
 
@@ -9,7 +9,7 @@ import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ServiceFileHandlerTest {
+public class StubServiceFileHandlerTest {
     private static String thresholdContent = "-###-\n" +
             "{\n" +
             "    \"status\": {\n" +
@@ -54,7 +54,7 @@ public class ServiceFileHandlerTest {
         params.put("type", "json");
         params.put("timeout", "3000");
         params.put("delay", "1000");
-        Service service = ServiceFileHandler.getService("service", simpleContent, params);
+        StubService service = ServiceFileHandler.getService("service", simpleContent, params);
         assertEquals("service", service.getName());
         assertEquals(simpleContent, service.getFullServiceFile());
         assertEquals(Long.valueOf(3000), service.getDelayConfig().getTimeout());
@@ -79,7 +79,7 @@ public class ServiceFileHandlerTest {
         params.put("delay", "1000");
         params.put("endpoint", "/end/sss/a");
         params.put("threshold", "[45,15,40]");
-        Service service = ServiceFileHandler.getService("service", thresholdContent, params);
+        StubService service = ServiceFileHandler.getService("service", thresholdContent, params);
         assertEquals("service", service.getName());
         assertEquals(thresholdContent, service.getFullServiceFile());
         assertEquals(Long.valueOf(3000), service.getDelayConfig().getTimeout());

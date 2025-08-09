@@ -1,4 +1,4 @@
-package com.LT.restDummy.service.delay;
+package com.LT.restDummy.domain.delay;
 
 import com.LT.restDummy.domain.delay.DelayConfig;
 import org.junit.Before;

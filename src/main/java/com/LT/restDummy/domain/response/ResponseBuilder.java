@@ -1,6 +1,6 @@
 package com.LT.restDummy.domain.response;
 
-import com.LT.restDummy.domain.model.Service;
+import com.LT.restDummy.domain.model.StubService;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 
 public class ResponseBuilder {
 
-    public static List<StubResponse> build(Service service, String content, Map<String, String> params) {
+    public static List<StubResponse> build(StubService service, String content, Map<String, String> params) {
         List<StubResponse> result = new ArrayList<>();
 
         // --- Пустой контент — default-заглушка ---

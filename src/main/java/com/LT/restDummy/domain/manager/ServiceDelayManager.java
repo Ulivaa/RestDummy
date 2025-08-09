@@ -1,6 +1,6 @@
 package com.LT.restDummy.domain.manager;
 
-import com.LT.restDummy.domain.model.Service;
+import com.LT.restDummy.domain.model.StubService;
 
 import java.time.LocalDateTime;
 
@@ -21,7 +21,7 @@ public class ServiceDelayManager {
     }
 
     public void setDefaultDelays() {
-        for (Service s : registry.getAll()) {
+        for (StubService s : registry.getAll()) {
             s.getDelayConfig().setCurrentDelay(s.getDelayConfig().getDefaultDelay());
         }
     }
@@ -57,7 +57,7 @@ public class ServiceDelayManager {
 
 
     public void applyMinus10PercentToAll() {
-        for (Service service : registry.getAll()) {
+        for (StubService service : registry.getAll()) {
             long timeout = service.getDelayConfig().getTimeout();
             if (timeout > 0) {
                 service.getDelayConfig().setCurrentDelay((long) (timeout * 0.9));

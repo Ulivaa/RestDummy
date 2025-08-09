@@ -3,7 +3,7 @@ package com.LT.restDummy.service;
 import com.LT.restDummy.domain.manager.ServiceAvailabilityManager;
 import com.LT.restDummy.domain.manager.ServiceDelayManager;
 import com.LT.restDummy.domain.manager.ServiceRegistry;
-import com.LT.restDummy.domain.model.Service;
+import com.LT.restDummy.domain.model.StubService;
 
 import java.util.HashMap;
 import java.util.List;
@@ -20,7 +20,7 @@ public class ServiceValue {
         return INSTANCE;
     }
 
-    public ServiceValue initialize(HashMap<String, Service> services) {
+    public ServiceValue initialize(HashMap<String, StubService> services) {
         registry.registerAll(services);
         return this;
     }
@@ -37,7 +37,7 @@ public class ServiceValue {
         return delay;
     }
 
-    public void updateService(Service updatingService) {
+    public void updateService(StubService updatingService) {
         delay.setDelay(updatingService.getName(), updatingService.getDelayConfig().getCurrentDelay());
         availability.setAvailable(updatingService.getName(), updatingService.isAvailable());
     }
