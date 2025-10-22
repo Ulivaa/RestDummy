@@ -1,127 +1,193 @@
-#Что умеет заглушка?
+# RestDummy — описание классов проекта
 
-- Добавлять шаблоны ответа через гуи
-- Менять времена отклика через гуи и по rest запросу
-- Останавливать сервис через гуи и по rest запросу
-- Выставлять шедулер для долгого отклика и отключения сервиса
-- -10% от таймаута по всем сервисам
-- Выключить и включить все сервисы
-- Работа с HTTPS
-- Работа вперемешку HTTPS и HTTP
+Этот документ кратко описывает назначение каждого ключевого класса в текущей структуре проекта.
 
-###Как посмотреть версию вашей заглушки?
-Host:port/version
-
-Внизу страницы host:port/delay.
-
-Возвращается в составе json по host:port/getServices
-
-###С чего начать?
-
-Необходимо собрать jar, закинуть на сервер jar + файл properties.
-В файле изменить порт на свой и добавить имя подсистемы в файле properties по примеру:
-server.port=65376
-subsystem=VASHA_SUBSYSTEM
-influxdb.chanel=channel
-
-###Добавить новый сервис:
-
-1- Кнопка "Добавить сервис". Ребут заглушки не требуется.
-
-2- Руками. Добавить файл без расширения - имя файла - ваш эндпоинт. Требуется ребут заглушки.
-
-ВАЖНО:
-- По кнопке - необходимо добавить имя сервиса(файл и эндпоинт) и тело файла.
-
-- Имя сервиса - имя вашего эндпоинта. Чувствителен к регистру. (Если необходим особенный эндпоинт со слешами см. раздел Дополнительно)
-
-- Если вам нужно коррелировать параметры, необходимо добавить на место значения имя параметра заключенного в "__".
-  Пример: "rqUid": "__rqUid__"
-  Обращайте внимание на имя параметров - РЕГИСТР ДОЛЖЕН СООТВЕТСТВОВАТЬ ПОЛЮ/TЭГУ.
-
-- Поддерживаемые типы файлов: xml, json.
-
-- Тело файла должно включать обязательный для заполнения раздел:
----      
-delay=1000;
-timeout=3000;
-type=json;
----    
-
-Для корректной работы необходимо заключить текст в "---". И закрывать каждый параметр ";".
-
-Пример файла:
-{
-"rqUid": "__rqUid__",
-"rqTm": "__rqTm__",
-"operUid": "ssssssssss",
-"status": {
-"statusCode": 0,
-}
-}
----
-delay=1000;
-timeout=3000;
-type=json;
 ---
 
-###Рандомное число или строка для параметра:
-Вместо значения подставляем __rndNumChar<36>__ - рандомная строка с числами и буквами,
+## com.LT.restDummy (приложение)
+- **RestDummyApplication** — точка входа Spring Boot (запуск контекста приложения).
 
-__rndNum<12>__ - рандомное число,
+---
 
-__rndChar<5>__ - рандомная строка букв,
+## com.LT.restDummy.config
+- **PropertyBeen** — конфигурационный бин, читает свойства из `application.properties` и подготавливает зависимости/значения, используемые по всему приложению.
 
-__getNewRqUID<32>__ - рандомный RqUID по паттерну[0-9A-Fa-f]{32}.
+---
 
-Где число, заключенное в <> является длинной строки.
+## com.LT.restDummy.controller
+- **RestDummyController**
+  - Эндпоинты:
+    - `POST /services?service=<name>&delay=<ms>&isAvailable=<bool>` — вызов сервиса по имени.
+    - `GET|POST /customEndpoint/**` — вызов по произвольному пути (часть после `/customEndpoint` — имя/эндпоинт сервиса).
+    - `GET /getServices` — список сервисов + версия.
+    - `POST /editServices` — массовое изменение параметров сервисов.
+    - `GET /version` — вернуть версию приложения.
+  - Делегирует бизнес-логику в `ResponseHandlerService` и `ServiceManagementService`.
 
-Если вам нужно несколько похожих строк по типу, но уникальные, тогда необходимо к названию добавить порядковую цифру, например __getNewRqUID<32>__ и __getNewRqUID2<32>__
+- **DelayController** — вспомогательные эндпоинты управления задержками (сброс на дефолт, массовые операции и т.п.).
 
-###Несколько ответов от сервиса по процентной разбивке:
-Вам необходимо в файл добавить все ответы и заключить КАЖДЫЙ в -###-. Т.е между каждым верхним и кажним будет стоять два таких обозначения -###--###-
+---
 
-Также необходимо добавить параметр threshold=50,95,100; (цифры будут ваши). Обратите внимание, что сами ответы необходимо расположить в том порядке, в котором будут цифры в параметре, относящиеся к ответам.
+## com.LT.restDummy.date
+- **DateModule** — модульные настройки/адаптеры работы с датами (форматы сериализации и т.п.).
+- **DateUtils** — утилиты для операций с датами (парсинг, форматирование, арифметика).
 
-Цифры: отвечают за пороги между процентами. Например: вам необходимо три ответа от сервиса первый отвечает в 50% случаев, второй в 45% третий 5%. значит в параметре мы указываем 50,95,100. Где распределение будет считаться от предыдущего порога к следующему, т.е. от 1 до 50, от 51 до 95 и от 96 до 100.  как мы получили цифры каждый новый порог вычисляется путем сложения предыдущего и нужного нам процента т.е. 50+45=95.
+---
 
-###ENDPOINTS custom
-Если вам необходим эндпоинт типа /set/preset/VashService (особенные случаи)
-в тело файла необходимо добавить четвертый параметр: endpoint=/set/preset/VashService;
+## com.LT.restDummy.domain.delay
+- **DelayConfig**
+  - Конфигурация задержек и таймаутов сервиса:
+    - `defaultDelay`, `currentDelay`, `timeout`.
+    - Поля планировщика: дата применения и отложенная задержка.
 
-В таком случае имя файла у вас останется обычным VashService. Но когда контекст заглушки будет подниматься - за имя сервиса и эндпоинта будет считать ваш параметр.
+---
 
-В таком случае вызов супа будет http://host:port/customEndpoint, где после на беке будет подставляется http://host:port/customEndpoint/set/preset/VashService
+## com.LT.restDummy.domain.dto
+- **ServiceRequestDto** — DTO для редактирования одного сервиса (имя, задержка, таймаут, доступность, системное имя).
+- **ServicesDto** — контейнер-список `ServiceRequestDto` (используется в `/editServices`).
 
-###Работа с уже добавленным сервисом
-Сервис удаляется руками на сервере
-Обновить сервис можно по кнопке в гуи - указав то же название и заменив полностью тело файла
+---
 
-###СУП. Как настраивать ФП на заглушку:
-В супе параметр должен выглядеть так:http://host:port/services?service=VashService
+## com.LT.restDummy.domain.manager
+- **ServiceRegistry**
+  - Потокобезопасный реестр сервисов (`ConcurrentHashMap`).
+  - `register`, `registerAll`, `get(name)` (если нет — бросает `ServiceNotFoundException`), `getAll`, `getAllNames`.
 
-Т.е. ваш эндпоинт передается в качестве параметра service=VashService
+- **ServiceDelayManager**
+  - Управление задержками: `getDelay/setDelay`, `setDefaultDelays()`.
+  - Таймауты/планировщик: `getTimeout`, `getDelayForScheduler/setDelayForScheduler`, `getSchedulerToDelay/setSchedulerToDelay`.
+  - Утилиты: `getDefaultDelay`, `calculateMinus10PercentDelay`, `applyMinus10PercentToAll`.
 
-###Шедулер:
-Кнопка "Изменить".
-Выставить время начала задержки или/и отключения.
-Задержка дефолтная 10 минут.
+- **ServiceAvailabilityManager**
+  - Доступность сервисов: `isAvailable/setAvailable`, `setAvailableToAll`.
+  - Планирование доступности по времени: `scheduleAvailability`, `getAvailabilityScheduler`.
 
-###Для использования в иных автоматизациях:
-Чтобы выставить delay рестом: http://host:port/services?service=VashService&delay=1000
+---
 
-Чтобы остановить/включить сервис рестом: http://host:port/services?service=VashService&isAvailable=false
+## com.LT.restDummy.domain.model
+- **StubService**
+  - Модель заглушаемого сервиса: имя, тип (`json|xml`), endpoint, системное имя.
+  - Доступность + планировщик доступности.
+  - `DelayConfig` — конфиг задержек.
+  - `responses` — список вариантов ответа (`List<StubResponse>`).
+  - `responseType` — стратегия выбора ответа (`ResponseType`).
 
-###Настройка логирования:
-Если вам очень сильно нужно посмотреть что приходит/уходит вы можете включить логирование в файле properties.
-logging.level.root=info
-После того как закончите, ПОЖАЛУЙСТА, верните логирование обратно в error. При обычной работе не должно писаться много логов.
+---
 
-Логи запроса можно найти по слову REQUEST:
+## com.LT.restDummy.domain.response
+- **ResponseType** — стратегии выбора ответа:
+  - `DEFAULT` — всегда первый ответ.
+  - `THRESHOLD` — по весам (вероятностно, на основании `key` у ответа).
+  - `PARAM_BASED` — по значению параметра (name/value) из тела запроса.
 
-Логи ответа можно найти по слову RESPONSE:
+- **StubResponse**
+  - Описывает один ответ: контент (JSON/XML строка), тип, ключ/вес (`key`), имя/значение параметра (для `PARAM_BASED`).
 
-###HTTPS и HTTP
-Для работы заглушки через https необходимо добавить в properties параметр use.https=true
+- **ResponseResolver**
+  - Выбор подходящего `StubResponse` из `StubService` по стратегии (`ResponseType`).
+  - Обрабатывает пустые списки/несоответствия, возвращает fallback.
 
-Для работы заглушки сразу через https и https(будет подниматься один jar, используя два порта) необходимо добавить два параметра - use.http.https=true и ВАШ НОВЫЙ ПОРТ server.http.port=11111
+- **ResponseBuilder**
+  - Собирает `List<StubResponse>` для `StubService` из текста заглушки и параметров (`servicesParams.properties`).
+  - Определяет `responseType` сервиса и расставляет служебные поля ответов.
+
+---
+
+## com.LT.restDummy.exception
+- **ServiceException** — бизнес-исключения (например, сервис временно недоступен).
+- **ServiceNotFoundException** — попытка обратиться к несуществующему сервису в реестре.
+- **IncorrectParameterException** — ошибки валидации входных параметров.
+- **ErrorHandler** — глобальный обработчик исключений (формирует HTTP-ответы об ошибках).
+- **ErrorResponse** — DTO ответа об ошибке (код/сообщение/детали).
+
+---
+
+## com.LT.restDummy.file
+- **ServiceFileHandler**
+  - Работа с файлами заглушек и параметрами:
+    - `fullFile(name, content)` — сохранение контента в каталог `services/`.
+    - `getListFilesForFolder(dir)` — рекурсивный сбор имён файлов.
+    - `readPropertiesFile(path)` — загрузка `.properties`.
+    - `getService(name, content)` / `getService(name, content, params)` — построение `StubService`.
+    - `updateFilesServices(name, content, rawParams)` — обновление `.properties` и сохранение контента.
+
+---
+
+## com.LT.restDummy.helper
+- **ResponseHeaderBuilder**
+  - Сборка `HttpHeaders`:
+    - Базовый: `build(type)` → `Content-Type: application/json|xml`.
+    - Расширенный: добавление произвольных заголовков с фильтром hop-by-hop и контролем переопределения `Content-Type`.
+
+- **ResponseDelay**
+  - Планирует отдачу `ResponseEntity<String>` с задержкой (мс).
+  - Безопасно отправляет метрику времени ответа (через `VictoriaWriter`), логирует исключения.
+
+- **ResponseCorrelatorService**
+  - Корреляции/подстановки: встраивает значения из входного запроса в шаблон ответа (регексы, плейсхолдеры).
+
+- **ResponseHelper** — вспомогательные утилиты, используемые при формировании ответа.
+
+---
+
+## com.LT.restDummy.influx *(историческая интеграция)*
+- **InfluxBean**, **InfluxConnect**, **InfluxWriter** — инициализация клиента и отправка метрик в InfluxDB (может быть отключено/неиспользуется).
+
+---
+
+## com.LT.restDummy.scheduler
+- **DelaySchedulerService** — применение отложенной задержки (по расписанию).
+- **AvailabilitySchedulerService** — плановое включение/выключение сервиса.
+- **Scheduler** — инициализация периодических задач (если требуется).
+
+---
+
+## com.LT.restDummy.service
+- **ResponseHandlerService**
+  - Основной обработчик запросов:
+    1. Получить `StubService` из `ServiceValue.registry()`.
+    2. Применить входные флаги (`delay`, `isAvailable`).
+    3. Выбрать `StubResponse` через `ResponseResolver`.
+    4. Применить корреляции `ResponseCorrelatorService`.
+    5. Отдать через `ResponseDelay` с заголовками `ResponseHeaderBuilder`.
+
+- **ServiceManagementService**
+  - Операции для UI/админки: вернуть список сервисов (с версией), массово применить изменения (delay/available и т.п.).
+
+- **ServiceMapper**
+  - Маппинг `StubService` ⇄ `ServiceRequestDto` (для обмена с фронтом).
+
+- **ServiceValue**
+  - Фасад над реестром и менеджерами:
+    - `registry()` → `ServiceRegistry`
+    - `availability()` → `ServiceAvailabilityManager`
+    - `delay()` → `ServiceDelayManager`
+    - `updateService(StubService)` — применить текущую задержку/доступность.
+    - `calculateMinus10PercentDelay(timeout)` — утилита для планировщика.
+
+---
+
+## com.LT.restDummy.util
+- **JsonXmlParamExtractor**
+  - Извлечение значения параметра из тела запроса:
+    - JSON — JsonPath `$..param`.
+    - XML — XPath `//*[local-name()='param']`.
+  - Null-safe, аккуратные логи предупреждений.
+
+- **RandomUtils** — генерация случайных значений для шаблонов/корреляций.
+
+---
+
+## com.LT.restDummy.victoria
+- **VictoriaWriter**
+  - Отправка метрик в VictoriaMetrics (Prometheus-формат):
+    - `mock_response_time_ms{application, channel, operation} <value>`
+    - `mock_requests_total{...} <value>` — накапливается и шлётся периодически.
+  - Мягко отключается при отсутствии `victoria.url` (ошибки логируются, не валят обработку).
+
+---
+
+## com.LT.restDummy.viewData
+- **ViewServiceData**, **ViewServiceDataDTO**, **ViewServiceNewData** — модели/DTO для фронта (табличные представления сервисов, формы редактирования).
+
+---

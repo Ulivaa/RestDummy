@@ -28,48 +28,50 @@ public class ResponseHandlerService {
             long delay,
             Boolean isAvailable
     ) {
-        log.info("=== Обработка запроса к сервису: {} ===", serviceName);
-        log.info("REQUEST BODY:\n{}", requestBody);
+        final String safeRequestBody = (requestBody != null) ? requestBody : "";
 
-        StubService service = serviceValue.registry().get(serviceName);
+        log.info("=== Обработка запроса к сервису: {} ===", serviceName);
+        log.info("REQUEST BODY:\n{}", safeRequestBody);
+
+        final StubService service = serviceValue.registry().get(serviceName);
         if (service == null) {
             throw new ServiceException("Сервис [" + serviceName + "] не найден в конфигурации");
         }
 
-        // Устанавливаем параметры
-        if (delay != 0) {
+        // Переопределяем параметры по запросу (если заданы)
+        if (delay != 0L) {
             serviceValue.delay().setDelay(serviceName, delay);
             log.info("⏱ Установлена новая задержка: {} мс", delay);
         }
-
         if (isAvailable != null) {
             serviceValue.availability().setAvailable(serviceName, isAvailable);
             log.info("🔁 Доступность сервиса обновлена: {}", isAvailable);
         }
-
         if (!serviceValue.availability().isAvailable(serviceName)) {
             throw new ServiceException("Сервис временно недоступен. Включите заглушку");
         }
 
-        String type = service.getType();
-
+        final String type = service.getType();
         log.info("📦 Тип логики ответа: {}", service.getResponseType());
 
-        StubResponse response = ResponseResolver.resolve(service, requestBody);
+        final StubResponse resolved = ResponseResolver.resolve(service, safeRequestBody);
+        if (resolved == null) {
+            throw new ServiceException("Не удалось определить ответ для сервиса [" + serviceName + "]");
+        }
 
         log.info("✅ Выбран ответ: [type={}, key={}, paramName={}, paramValue={}]",
-                response.getType(),
-                response.getKey(),
-                response.getParamName(),
-                response.getParamValue());
+                resolved.getType(), resolved.getKey(), resolved.getParamName(), resolved.getParamValue());
 
-        String correlatedBody = responseCorrelatorService.correlate(requestBody, response.getContent(), type);
+        final String correlatedBody =
+                responseCorrelatorService.correlate(safeRequestBody, resolved.getContent(), type);
+
+        final long effectiveDelay = serviceValue.delay().getDelay(serviceName);
 
         return ResponseDelay.scheduleResponse(
-                serviceValue.delay().getDelay(serviceName),
+                effectiveDelay,
                 correlatedBody,
                 serviceName,
-                ResponseHeaderBuilder.build(service.getType())
+                ResponseHeaderBuilder.build(type)
         );
     }
 }

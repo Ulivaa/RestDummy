@@ -3,6 +3,7 @@ package com.LT.restDummy.domain.manager;
 import com.LT.restDummy.domain.model.StubService;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 public class ServiceAvailabilityManager {
 
@@ -13,11 +14,11 @@ public class ServiceAvailabilityManager {
     }
 
     public boolean isAvailable(String name) {
-        return registry.get(name).isAvailable();
+        return service(name).isAvailable();
     }
 
     public void setAvailable(String name, boolean available) {
-        registry.get(name).setAvailable(available);
+        service(name).setAvailable(available);
     }
 
     public void setAvailableToAll(boolean available) {
@@ -27,11 +28,17 @@ public class ServiceAvailabilityManager {
     }
 
     public void scheduleAvailability(String name, LocalDateTime scheduler) {
-        registry.get(name).setAvailabilityScheduler(scheduler);
+        service(name).setAvailabilityScheduler(scheduler);
     }
 
     public LocalDateTime getAvailabilityScheduler(String name) {
-        return registry.get(name).getAvailabilityScheduler();
+        return service(name).getAvailabilityScheduler();
+    }
+
+    // --- helpers ---
+    private StubService service(String name) {
+        Objects.requireNonNull(name, "service name must not be null");
+        // registry.get(name) бросит ServiceNotFoundException для неизвестного сервиса — как и раньше
+        return registry.get(name);
     }
 }
-

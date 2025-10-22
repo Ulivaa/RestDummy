@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+
 class ServiceManagementServiceTest {
 
     @Mock
@@ -33,14 +34,23 @@ class ServiceManagementServiceTest {
 
     @BeforeEach
     void setUp() {
-        stubService = new StubService();
-        stubService.setName("test");
+        // ВАЖНО: создаём StubService с DelayConfig внутри (иначе NPE в ServiceMapper)
+        stubService = new StubService("test", 100L, 3000L, true, "TestSystem");
         stubService.setType("json");
-        when(serviceValue.registry()).thenReturn(serviceRegistry);
+
+        // Если currentDelay в DelayConfig по умолчанию null — синхронизируем с defaultDelay,
+        // чтобы ServiceMapper.serviceToDto(...) не упал на getCurrentDelay()
+        if (stubService.getDelayConfig().getCurrentDelay() == null) {
+            stubService.getDelayConfig().setCurrentDelay(stubService.getDelayConfig().getDefaultDelay());
+        }
+
+        // НИКАКИХ стабингов тут — чтобы не ловить UnnecessaryStubbingException
     }
 
     @Test
     void shouldReturnServicesWithVersion() {
+        // Стабы только тут, потому что getServices их использует
+        when(serviceValue.registry()).thenReturn(serviceRegistry);
         when(serviceRegistry.getAll()).thenReturn(Collections.singletonList(stubService));
 
         JSONObject result = managementService.getServices("v1.2.3");
@@ -52,9 +62,12 @@ class ServiceManagementServiceTest {
 
     @Test
     void shouldEditServicesSuccessfully() {
+        // Здесь registry не используется → не стабаем.
         doNothing().when(serviceValue).updateService(any(StubService.class));
 
-        JSONObject result = managementService.editServices(Arrays.asList(ServiceMapper.serviceToDto(stubService)));
+        JSONObject result = managementService.editServices(
+                Arrays.asList(ServiceMapper.serviceToDto(stubService))
+        );
 
         assertTrue((Boolean) result.get("success"));
         verify(serviceValue, times(1)).updateService(any(StubService.class));
@@ -62,6 +75,7 @@ class ServiceManagementServiceTest {
 
     @Test
     void shouldReturnEmptyListIfNoServicesConfigured() {
+        when(serviceValue.registry()).thenReturn(serviceRegistry);
         when(serviceRegistry.getAll()).thenReturn(Collections.emptyList());
 
         JSONObject result = managementService.getServices("v0.0.0");
@@ -74,6 +88,7 @@ class ServiceManagementServiceTest {
 
     @Test
     void shouldHandleNullRegistryGracefully() {
+        when(serviceValue.registry()).thenReturn(serviceRegistry);
         when(serviceRegistry.getAll()).thenReturn(null);
 
         JSONObject result = managementService.getServices("v2.0.0");

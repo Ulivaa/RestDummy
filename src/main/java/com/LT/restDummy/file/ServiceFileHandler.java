@@ -39,26 +39,32 @@ public class ServiceFileHandler {
             directory.mkdirs();
         }
         File file = new File(directory, fileName);
-        Files.write(content.getBytes(), file);
+        Files.write(content.getBytes("UTF-8"), file);
     }
 
     /**
-     * Возвращает список всех файлов (не рекурсивно) в указанной папке.
+     * Возвращает список всех файлов (рекурсивно) в указанной папке.
      *
      * @param folder папка, из которой читаем
      * @return список имён файлов
      */
     public static List<String> getListFilesForFolder(File folder) {
         if (!folder.exists()) {
+            // создаём верхний уровень, как и раньше
             folder.mkdir();
         }
-        List<String> result = new ArrayList<>();
+        List<String> result = new ArrayList<String>();
         collectFileNames(folder, result);
         return result;
     }
 
     private static void collectFileNames(File folder, List<String> result) {
-        for (File file : Objects.requireNonNull(folder.listFiles())) {
+        File[] files = folder.listFiles();
+        if (files == null) {
+            // может быть из-за прав/IO-проблем — просто ничего не добавляем
+            return;
+        }
+        for (File file : files) {
             if (file.isDirectory()) {
                 collectFileNames(file, result);
             } else {
@@ -81,12 +87,12 @@ public class ServiceFileHandler {
     public static StubService getService(String name, String content) {
         Properties properties = readPropertiesFile(PARAMS_FILE);
 
-        HashMap<String, String> params = new HashMap<>();
+        HashMap<String, String> params = new HashMap<String, String>();
         for (Map.Entry<Object, Object> entry : properties.entrySet()) {
             String key = (String) entry.getKey();
-            if (key.startsWith(name + ".")) {
+            if (key != null && key.startsWith(name + ".")) {
                 String shortKey = key.substring((name + ".").length());
-                params.put(shortKey, entry.getValue().toString());
+                params.put(shortKey, String.valueOf(entry.getValue()));
             }
         }
 
@@ -109,17 +115,21 @@ public class ServiceFileHandler {
         // 📦 Ответы
         List<StubResponse> stubResponses = ResponseBuilder.build(service, content, params);
         service.setResponses(stubResponses);
-        service.setResponseType(service.getResponseType()); // уже установлен в ResponseBuilder
+        // responseType устанавливается в ResponseBuilder — ничего лишнего не делаем
 
         // 🌐 Общие параметры
-        service.setType(params.get("type"));
-        service.setSystemName(params.getOrDefault("systemName", "Не указана"));
-        service.setEndpoint(params.get("endpoint"));
+        if (params != null) {
+            service.setType(params.get("type"));
+            service.setSystemName(params.containsKey("systemName") ? params.get("systemName") : "Не указана");
+            service.setEndpoint(params.get("endpoint"));
+        } else {
+            service.setSystemName("Не указана");
+        }
 
-        // ⏱️ Задержки
-        Long defaultDelay = Long.valueOf(params.get("delay"));
-        Long timeout = Long.valueOf(params.get("timeout"));
-        Long delayForScheduler = ServiceValue.calculateMinus10PercentDelay(timeout);
+        // ⏱️ Задержки (безопасный парсинг)
+        long defaultDelay = parseLong(params, "delay", 0L);
+        long timeout     = parseLong(params, "timeout", 0L);
+        long delayForScheduler = ServiceValue.calculateMinus10PercentDelay(timeout);
 
         DelayConfig delayConfig = new DelayConfig(defaultDelay, timeout);
         delayConfig.setDelayScheduler(DelayConfig.DEFAULT_DATE, delayForScheduler);
@@ -129,6 +139,18 @@ public class ServiceFileHandler {
         service.setAvailabilityScheduler(StubService.DEFAULT_DATE);
 
         return service;
+    }
+
+    private static long parseLong(Map<String, String> params, String key, long def) {
+        if (params == null) return def;
+        String v = params.get(key);
+        if (v == null) return def;
+        try {
+            return Long.parseLong(v.trim());
+        } catch (NumberFormatException ex) {
+            log.warn("Некорректное значение long для ключа '{}' = '{}', используем {}", key, v, def);
+            return def;
+        }
     }
 
     // ===========================
@@ -163,6 +185,8 @@ public class ServiceFileHandler {
         Properties properties = new Properties();
         try (FileInputStream fis = new FileInputStream(path)) {
             properties.load(fis);
+        } catch (FileNotFoundException e) {
+            log.warn("Файл параметров не найден: {} — используем пустые значения", path);
         } catch (IOException e) {
             log.error("Не удалось загрузить файл: {}", path, e);
         }
@@ -170,7 +194,11 @@ public class ServiceFileHandler {
     }
 
     private static Map<String, String> parseInlineParams(String rawParams) {
-        Map<String, String> result = new HashMap<>();
+        Map<String, String> result = new HashMap<String, String>();
+        if (rawParams == null || rawParams.isEmpty()) {
+            return result;
+        }
+        // формат: key=value (на каждой строке)
         Pattern pattern = Pattern.compile("(.+?)=(.+)");
         Matcher matcher = pattern.matcher(rawParams);
         while (matcher.find()) {
@@ -180,10 +208,16 @@ public class ServiceFileHandler {
     }
 
     private static void updateProperties(Properties props, Map<String, String> updates) {
-        updates.forEach(props::setProperty);
+        if (updates == null || updates.isEmpty()) return;
+        for (Map.Entry<String, String> e : updates.entrySet()) {
+            if (e.getKey() != null && e.getValue() != null) {
+                props.setProperty(e.getKey(), e.getValue());
+            }
+        }
     }
 
     private static void removeIfMissing(Properties props, String serviceName, Map<String, String> updates) {
+        if (updates == null) updates = Collections.emptyMap();
         if (!updates.containsKey(serviceName + ".endpoint")) {
             props.remove(serviceName + ".endpoint");
         }

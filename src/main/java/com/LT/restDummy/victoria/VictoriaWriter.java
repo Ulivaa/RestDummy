@@ -12,29 +12,43 @@ import java.text.DecimalFormatSymbols;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @Slf4j
 public class VictoriaWriter {
 
-    private static RestTemplate restTemplate;
-    private static String url;
-    private static String application;
-    private static String channel;
+    private static volatile RestTemplate restTemplate;
+    private static volatile String url;
+    private static volatile String application;
+    private static volatile String channel;
 
-    // Карта для хранения количества запросов (метрика mock_requests_total)
-    private static final Map<String, Integer> mockRequestCounters = new ConcurrentHashMap<>();
-    private static final Map<String, Integer> lastSentCounters = new ConcurrentHashMap<>();
-    private static final Map<String, Long> lastActivityTimestamp = new ConcurrentHashMap<>(); // Последняя активность
+    // включено ли отправление метрик (мягкое отключение, если нет конфига)
+    private static volatile boolean enabled = false;
 
-    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private static final Map<String, Integer> mockRequestCounters = new ConcurrentHashMap<String, Integer>();
+    private static final Map<String, Integer> lastSentCounters = new ConcurrentHashMap<String, Integer>();
+    private static final Map<String, Long> lastActivityTimestamp = new ConcurrentHashMap<String, Long>();
+
+    private static final AtomicInteger THREAD_SEQ = new AtomicInteger(1);
+    private static final ThreadFactory SCHEDULER_TF = r -> {
+        Thread t = new Thread(r, "victoria-writer-" + THREAD_SEQ.getAndIncrement());
+        t.setDaemon(true);
+        t.setUncaughtExceptionHandler((thr, ex) ->
+                log.error("Uncaught exception in VictoriaWriter thread {}", thr.getName(), ex));
+        return t;
+    };
+
+    private static final ScheduledExecutorService scheduler =
+            Executors.newScheduledThreadPool(1, SCHEDULER_TF);
 
     public VictoriaWriter(
             RestTemplate restTemplate,
-            @Value("${victoria.url}") String victoriaUrl,
-            @Value("${subsystem}") String application,
-            @Value("${channel}") String channel) {
+            @Value("${victoria.url:}") String victoriaUrl,
+            @Value("${subsystem:}") String application,
+            @Value("${channel:}") String channel) {
         VictoriaWriter.restTemplate = restTemplate;
         VictoriaWriter.url = victoriaUrl;
         VictoriaWriter.application = application;
@@ -43,41 +57,48 @@ public class VictoriaWriter {
 
     @PostConstruct
     public void init() {
-// Отправка mock_requests_total раз в 30 секунд
+        // включаем только если всё минимально сконфигурировано
+        enabled = (restTemplate != null) && url != null && !url.trim().isEmpty();
+        if (!enabled) {
+            log.warn("VictoriaWriter is DISABLED (missing restTemplate or victoria.url). Metrics will be skipped.");
+            return;
+        }
+        // Отправка mock_requests_total раз в 30 секунд
         scheduler.scheduleAtFixedRate(VictoriaWriter::sendMockRequestsTotalMetrics, 30, 30, TimeUnit.SECONDS);
-// Очистка неактивных счетчиков раз в 30 минут
+        // Очистка неактивных счетчиков раз в 30 минут
         scheduler.scheduleAtFixedRate(VictoriaWriter::clearOldCounters, 30, 30, TimeUnit.MINUTES);
     }
 
-    public static void sendMetrics(String operationName, double responseTime) {
+    public static void sendMetrics(String operationName, double responseTimeMs) {
+        if (!enabled) return;
         try {
-            long currentTime = Instant.now().getEpochSecond();
+            final String op = (operationName != null) ? operationName : "unknown";
+            final long nowSec = Instant.now().getEpochSecond();
 
-// 1️⃣ Округляем responseTime до 1 знака после запятой
+            // округляем до 1 знака после запятой (US-десятичный разделитель)
             DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
             DecimalFormat df = new DecimalFormat("0.0", symbols);
-            String formattedValue = df.format(responseTime);
+            String formattedValue = df.format(responseTimeMs);
 
-// 2️⃣ Формируем строку mock_response_time_ms
+            // mock_response_time_ms
             String durationMetric = String.format(
                     "mock_response_time_ms{application=\"%s\", channel=\"%s\", operation=\"%s\"} %s",
-                    application, channel, operationName, formattedValue);
+                    safe(application), safe(channel), op, formattedValue);
 
             log.info("📤 Sending Prometheus metric:\n{}", durationMetric);
 
-// 3️⃣ Увеличиваем mock_requests_total для конкретного сервиса (Используем Integer::sum)
-            mockRequestCounters.merge(operationName, 1, Integer::sum);
-            lastActivityTimestamp.put(operationName, currentTime);
+            // счётчики и активность
+            mockRequestCounters.merge(op, 1, new java.util.function.BiFunction<Integer, Integer, Integer>() {
+                @Override public Integer apply(Integer a, Integer b) { return Integer.valueOf(((a == null ? 0 : a.intValue()) + (b == null ? 0 : b.intValue()))); }
+            });
+            lastActivityTimestamp.put(op, nowSec);
 
-// 4️⃣ Заголовки запроса
+            // заголовки
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.TEXT_PLAIN);
+            HttpEntity<String> requestEntity = new HttpEntity<String>(durationMetric, headers);
 
-            HttpEntity requestEntity = new HttpEntity<>(durationMetric, headers);
-
-// 5️⃣ Отправка mock_response_time_ms в VictoriaMetrics
-            ResponseEntity response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
-
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
             if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
                 log.info("✅ mock_response_time_ms successfully sent.");
             } else {
@@ -90,30 +111,29 @@ public class VictoriaWriter {
     }
 
     private static void sendMockRequestsTotalMetrics() {
+        if (!enabled) return;
         try {
             for (Map.Entry<String, Integer> entry : mockRequestCounters.entrySet()) {
-                String operationName = entry.getKey();
-                int currentValue = entry.getValue() != null ? entry.getValue() : 0; // ✅ Безопасное приведение к int
-                int lastValue = lastSentCounters.getOrDefault(operationName, 0);
+                final String op = entry.getKey();
+                final int currentValue = (entry.getValue() != null) ? entry.getValue().intValue() : 0;
+                final int lastValue = (lastSentCounters.containsKey(op) ? lastSentCounters.get(op).intValue() : 0);
 
-// Отправляем только если значение изменилось
+                // отправляем только если значение изменилось
                 if (currentValue != lastValue) {
                     String mockTotalMetric = String.format(
                             "mock_requests_total{application=\"%s\", channel=\"%s\", operation=\"%s\"} %d",
-                            application, channel, operationName, currentValue);
+                            safe(application), safe(channel), op, currentValue);
 
                     log.info("📤 Sending accumulated mock_requests_total metric:\n{}", mockTotalMetric);
 
-// Заголовки запроса
                     HttpHeaders headers = new HttpHeaders();
                     headers.setContentType(MediaType.TEXT_PLAIN);
+                    HttpEntity<String> requestEntity = new HttpEntity<String>(mockTotalMetric, headers);
 
-                    HttpEntity requestEntity = new HttpEntity<>(mockTotalMetric, headers);
-                    ResponseEntity response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
-
+                    ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
                     if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
                         log.info("✅ mock_requests_total successfully sent.");
-                        lastSentCounters.put(operationName, currentValue);
+                        lastSentCounters.put(op, Integer.valueOf(currentValue));
                     } else {
                         log.error("❌ Failed to send mock_requests_total! Response code: {} | Body: {}",
                                 response.getStatusCode(), response.getBody());
@@ -126,10 +146,17 @@ public class VictoriaWriter {
     }
 
     private static void clearOldCounters() {
+        if (!enabled) return;
         long currentTime = Instant.now().getEpochSecond();
-        long oneHourAgo = currentTime - 3600; // 1 час назад
+        long oneHourAgo = currentTime - 3600;
 
-        boolean hasRecentActivity = lastActivityTimestamp.values().stream().anyMatch(ts -> ts > oneHourAgo);
+        boolean hasRecentActivity = false;
+        for (Long ts : lastActivityTimestamp.values()) {
+            if (ts != null && ts.longValue() > oneHourAgo) {
+                hasRecentActivity = true;
+                break;
+            }
+        }
 
         if (!hasRecentActivity) {
             log.info("🗑 No activity in the last hour, clearing all counters.");
@@ -137,5 +164,9 @@ public class VictoriaWriter {
             lastSentCounters.clear();
             lastActivityTimestamp.clear();
         }
+    }
+
+    private static String safe(String s) {
+        return (s != null) ? s : "null";
     }
 }

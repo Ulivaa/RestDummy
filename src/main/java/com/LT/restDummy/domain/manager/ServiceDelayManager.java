@@ -1,8 +1,10 @@
 package com.LT.restDummy.domain.manager;
 
 import com.LT.restDummy.domain.model.StubService;
+import com.LT.restDummy.domain.delay.DelayConfig;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 public class ServiceDelayManager {
 
@@ -13,55 +15,66 @@ public class ServiceDelayManager {
     }
 
     public long getDelay(String name) {
-        return registry.get(name).getDelayConfig().getCurrentDelay();
+        return delayCfg(name).getCurrentDelay();
     }
 
     public void setDelay(String name, long delay) {
-        registry.get(name).getDelayConfig().setCurrentDelay(delay);
+        delayCfg(name).setCurrentDelay(Math.max(0L, delay));
     }
 
     public void setDefaultDelays() {
         for (StubService s : registry.getAll()) {
-            s.getDelayConfig().setCurrentDelay(s.getDelayConfig().getDefaultDelay());
+            DelayConfig cfg = s.getDelayConfig();
+            Objects.requireNonNull(cfg, "DelayConfig must not be null for service: " + s.getName());
+            cfg.setCurrentDelay(cfg.getDefaultDelay());
         }
     }
 
     public long getTimeout(String name) {
-        return registry.get(name).getDelayConfig().getTimeout();
+        return delayCfg(name).getTimeout();
     }
 
     public long getDelayForScheduler(String name) {
-        return registry.get(name).getDelayConfig().getDelayForScheduler();
+        return delayCfg(name).getDelayForScheduler();
     }
 
     public void setDelayForScheduler(String name, long delay) {
-        registry.get(name).getDelayConfig().setDelayForScheduler(delay);
+        delayCfg(name).setDelayForScheduler(Math.max(0L, delay));
     }
 
     public LocalDateTime getSchedulerToDelay(String name) {
-        return registry.get(name).getDelayConfig().getSchedulerToDelay();
+        return delayCfg(name).getSchedulerToDelay();
     }
 
     public void setSchedulerToDelay(String name, LocalDateTime scheduler) {
-        registry.get(name).getDelayConfig().setSchedulerToDelay(scheduler);
+        delayCfg(name).setSchedulerToDelay(scheduler);
     }
 
     public long getDefaultDelay(String name) {
-        return registry.get(name).getDelayConfig().getDefaultDelay();
+        return delayCfg(name).getDefaultDelay();
     }
 
     public long calculateMinus10PercentDelay(String serviceName) {
-        long timeout = registry.get(serviceName).getDelayConfig().getTimeout();
+        long timeout = delayCfg(serviceName).getTimeout();
         return (long) (timeout * 0.9);
     }
 
-
     public void applyMinus10PercentToAll() {
         for (StubService service : registry.getAll()) {
-            long timeout = service.getDelayConfig().getTimeout();
+            DelayConfig cfg = service.getDelayConfig();
+            Objects.requireNonNull(cfg, "DelayConfig must not be null for service: " + service.getName());
+            long timeout = cfg.getTimeout();
             if (timeout > 0) {
-                service.getDelayConfig().setCurrentDelay((long) (timeout * 0.9));
+                cfg.setCurrentDelay((long) (timeout * 0.9));
             }
         }
+    }
+
+    // --- helpers ---
+    private DelayConfig delayCfg(String name) {
+        Objects.requireNonNull(name, "service name must not be null");
+        StubService s = registry.get(name); // кидает ServiceNotFoundException на неизвестное имя — как и раньше
+        DelayConfig cfg = s.getDelayConfig();
+        return Objects.requireNonNull(cfg, "DelayConfig must not be null for service: " + name);
     }
 }
