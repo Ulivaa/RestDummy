@@ -2,10 +2,12 @@ package com.LT.restDummy.domain.manager;
 
 import com.LT.restDummy.domain.model.StubService;
 import com.LT.restDummy.domain.delay.DelayConfig;
+import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+@Component
 public class ServiceDelayManager {
 
     private final ServiceRegistry registry;
@@ -73,7 +75,7 @@ public class ServiceDelayManager {
     // --- helpers ---
     private DelayConfig delayCfg(String name) {
         Objects.requireNonNull(name, "service name must not be null");
-        StubService s = registry.get(name); // кидает ServiceNotFoundException на неизвестное имя — как и раньше
+        StubService s = registry.get(name); // бросит ServiceNotFoundException для неизвестного сервиса
         DelayConfig cfg = s.getDelayConfig();
         return Objects.requireNonNull(cfg, "DelayConfig must not be null for service: " + name);
     }

@@ -5,6 +5,7 @@ subsystem=testSubsys
 channel=channel
 block=B1
 victoria.url=http://localhost:8480/insert/0/prometheus/api/v1/import/prometheus
+victoria.enabled=false
 
 # заглушка поднимается с протоколом https
 # use.https=true

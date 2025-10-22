@@ -6,11 +6,13 @@ import com.LT.restDummy.domain.manager.ServiceRegistry;
 import com.LT.restDummy.domain.model.StubService;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 
+/**
+ * Централизованное хранилище конфигурации сервисов (реестр + доступность + задержки).
+ * Используется ТОЛЬКО как Spring-бин (конструкторная инъекция). Никакой статики и никаких new внутри.
+ */
 @Service
 public class ServiceValue {
 
@@ -18,34 +20,20 @@ public class ServiceValue {
     private final ServiceAvailabilityManager availability;
     private final ServiceDelayManager delay;
 
-    // Мост к spring-бину (для совместимости со старым кодом)
-    private static volatile ServiceValue INSTANCE;
-
-    public ServiceValue() {
-        this.registry = new ServiceRegistry();
-        this.availability = new ServiceAvailabilityManager(registry);
-        this.delay = new ServiceDelayManager(registry);
+    // ВАЖНО: зависимости приходят извне (через Spring), а не создаются внутри.
+    public ServiceValue(ServiceRegistry registry,
+                        ServiceAvailabilityManager availability,
+                        ServiceDelayManager delay) {
+        this.registry = registry;
+        this.availability = availability;
+        this.delay = delay;
     }
 
-    @PostConstruct
-    void initStaticBridge() {
-        INSTANCE = this;
-    }
-
-    /**
-     * Временный мост для старого кода, который обращается к статическому синглтону.
-     * Работает после старта Spring-контекста.
-     */
-    @Deprecated
-    public static ServiceValue getInstance() {
-        return Objects.requireNonNull(
-                INSTANCE,
-                "ServiceValue ещё не инициализирован: Spring context не поднят"
-        );
-    }
-
-    public ServiceValue initialize(HashMap<String, StubService> services) {
-        registry.registerAll(services);
+    /** Инициализация реестра пачкой сервисов (например, при старте приложения). */
+    public ServiceValue initialize(Map<String, StubService> services) {
+        if (services != null && !services.isEmpty()) {
+            registry.registerAll(services);
+        }
         return this;
     }
 
@@ -61,23 +49,34 @@ public class ServiceValue {
         return delay;
     }
 
+    /** Обновляет runtime-настройки сервиса (delay/availability) из переданного объекта. */
     public void updateService(StubService updatingService) {
-        delay.setDelay(updatingService.getName(), updatingService.getDelayConfig().getCurrentDelay());
+        if (updatingService == null || updatingService.getName() == null) return;
+
+        // null-safe: delayConfig может быть не задан
+        long newDelay = 0L;
+        if (updatingService.getDelayConfig() != null) {
+            newDelay = updatingService.getDelayConfig().getCurrentDelay();
+        }
+        delay.setDelay(updatingService.getName(), newDelay);
         availability.setAvailable(updatingService.getName(), updatingService.isAvailable());
     }
 
     public String getTypeByService(String serviceName) {
-        return registry.get(serviceName).getType();
+        StubService s = registry.get(serviceName);
+        return (s != null) ? s.getType() : null;
     }
 
     public String getSystemNameByService(String serviceName) {
-        return registry.get(serviceName).getSystemName();
+        StubService s = registry.get(serviceName);
+        return (s != null) ? s.getSystemName() : null;
     }
 
     public List<String> getServicesName() {
         return registry.getAllNames();
     }
 
+    /** Утилита: 90% от таймаута (оставляем статической — это чистый helper без состояния). */
     public static long calculateMinus10PercentDelay(long timeout) {
         return (long) (timeout * 0.9);
     }

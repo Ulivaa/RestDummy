@@ -12,7 +12,6 @@ import java.text.DecimalFormatSymbols;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -25,12 +24,16 @@ public class VictoriaWriter {
     private static volatile String application;
     private static volatile String channel;
 
-    // включено ли отправление метрик (мягкое отключение, если нет конфига)
+    // глобальный флаг — реально ли отправляем метрики
     private static volatile boolean enabled = false;
 
-    private static final Map<String, Integer> mockRequestCounters = new ConcurrentHashMap<String, Integer>();
-    private static final Map<String, Integer> lastSentCounters = new ConcurrentHashMap<String, Integer>();
-    private static final Map<String, Long> lastActivityTimestamp = new ConcurrentHashMap<String, Long>();
+    // значение флага из настроек (дефолт: true, чтобы без указания было ВКЛ)
+    @Value("${victoria.enabled:true}")
+    private boolean enabledProperty;
+
+    private static final Map<String, Integer> mockRequestCounters = new ConcurrentHashMap<>();
+    private static final Map<String, Integer> lastSentCounters = new ConcurrentHashMap<>();
+    private static final Map<String, Long> lastActivityTimestamp = new ConcurrentHashMap<>();
 
     private static final AtomicInteger THREAD_SEQ = new AtomicInteger(1);
     private static final ThreadFactory SCHEDULER_TF = r -> {
@@ -48,7 +51,8 @@ public class VictoriaWriter {
             RestTemplate restTemplate,
             @Value("${victoria.url:}") String victoriaUrl,
             @Value("${subsystem:}") String application,
-            @Value("${channel:}") String channel) {
+            @Value("${channel:}") String channel
+    ) {
         VictoriaWriter.restTemplate = restTemplate;
         VictoriaWriter.url = victoriaUrl;
         VictoriaWriter.application = application;
@@ -57,12 +61,24 @@ public class VictoriaWriter {
 
     @PostConstruct
     public void init() {
-        // включаем только если всё минимально сконфигурировано
-        enabled = (restTemplate != null) && url != null && !url.trim().isEmpty();
-        if (!enabled) {
-            log.warn("VictoriaWriter is DISABLED (missing restTemplate or victoria.url). Metrics will be skipped.");
+        // включаем, если:
+        // 1) property не выключает (enabledProperty == true, а он по умолчанию true)
+        // 2) есть базовая конфигурация (url не пустой и есть restTemplate)
+        boolean hasMinimalConfig = restTemplate != null && url != null && !url.trim().isEmpty();
+        enabled = enabledProperty && hasMinimalConfig;
+
+        if (!enabledProperty) {
+            log.info("VictoriaWriter is DISABLED via property: victoria.enabled=false");
             return;
         }
+
+        if (!hasMinimalConfig) {
+            log.warn("VictoriaWriter is DISABLED (missing minimal config: restTemplate or victoria.url). Metrics will be skipped.");
+            return;
+        }
+
+        log.info("VictoriaWriter is ENABLED. Sending metrics to {}", url);
+
         // Отправка mock_requests_total раз в 30 секунд
         scheduler.scheduleAtFixedRate(VictoriaWriter::sendMockRequestsTotalMetrics, 30, 30, TimeUnit.SECONDS);
         // Очистка неактивных счетчиков раз в 30 минут
@@ -88,15 +104,13 @@ public class VictoriaWriter {
             log.info("📤 Sending Prometheus metric:\n{}", durationMetric);
 
             // счётчики и активность
-            mockRequestCounters.merge(op, 1, new java.util.function.BiFunction<Integer, Integer, Integer>() {
-                @Override public Integer apply(Integer a, Integer b) { return Integer.valueOf(((a == null ? 0 : a.intValue()) + (b == null ? 0 : b.intValue()))); }
-            });
+            mockRequestCounters.merge(op, 1, Integer::sum);
             lastActivityTimestamp.put(op, nowSec);
 
             // заголовки
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.TEXT_PLAIN);
-            HttpEntity<String> requestEntity = new HttpEntity<String>(durationMetric, headers);
+            HttpEntity<String> requestEntity = new HttpEntity<>(durationMetric, headers);
 
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
             if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
@@ -115,8 +129,8 @@ public class VictoriaWriter {
         try {
             for (Map.Entry<String, Integer> entry : mockRequestCounters.entrySet()) {
                 final String op = entry.getKey();
-                final int currentValue = (entry.getValue() != null) ? entry.getValue().intValue() : 0;
-                final int lastValue = (lastSentCounters.containsKey(op) ? lastSentCounters.get(op).intValue() : 0);
+                final int currentValue = entry.getValue() != null ? entry.getValue() : 0;
+                final int lastValue = lastSentCounters.getOrDefault(op, 0);
 
                 // отправляем только если значение изменилось
                 if (currentValue != lastValue) {
@@ -128,12 +142,12 @@ public class VictoriaWriter {
 
                     HttpHeaders headers = new HttpHeaders();
                     headers.setContentType(MediaType.TEXT_PLAIN);
-                    HttpEntity<String> requestEntity = new HttpEntity<String>(mockTotalMetric, headers);
+                    HttpEntity<String> requestEntity = new HttpEntity<>(mockTotalMetric, headers);
 
                     ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
                     if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
                         log.info("✅ mock_requests_total successfully sent.");
-                        lastSentCounters.put(op, Integer.valueOf(currentValue));
+                        lastSentCounters.put(op, currentValue);
                     } else {
                         log.error("❌ Failed to send mock_requests_total! Response code: {} | Body: {}",
                                 response.getStatusCode(), response.getBody());
@@ -150,13 +164,10 @@ public class VictoriaWriter {
         long currentTime = Instant.now().getEpochSecond();
         long oneHourAgo = currentTime - 3600;
 
-        boolean hasRecentActivity = false;
-        for (Long ts : lastActivityTimestamp.values()) {
-            if (ts != null && ts.longValue() > oneHourAgo) {
-                hasRecentActivity = true;
-                break;
-            }
-        }
+        boolean hasRecentActivity = lastActivityTimestamp.values().stream()
+                .filter(ts -> ts != null && ts > oneHourAgo)
+                .findAny()
+                .isPresent();
 
         if (!hasRecentActivity) {
             log.info("🗑 No activity in the last hour, clearing all counters.");

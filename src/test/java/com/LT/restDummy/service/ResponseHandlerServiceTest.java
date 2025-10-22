@@ -9,10 +9,13 @@ import com.LT.restDummy.domain.response.ResponseType;
 import com.LT.restDummy.domain.response.StubResponse;
 import com.LT.restDummy.exception.ServiceException;
 import com.LT.restDummy.helper.ResponseCorrelatorService;
+import com.LT.restDummy.helper.ResponseDelay;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.util.concurrent.CompletableFuture;
@@ -25,6 +28,8 @@ class ResponseHandlerServiceTest {
 
     @Mock private ServiceValue serviceValue;
     @Mock private ResponseCorrelatorService correlatorService;
+    @Mock private ResponseDelay responseDelay; // 👈 добавили мок
+
     @InjectMocks private ResponseHandlerService handlerService;
 
     @Mock private ServiceDelayManager delayManager;
@@ -47,6 +52,12 @@ class ResponseHandlerServiceTest {
 
         mockedStatic = mockStatic(ResponseResolver.class);
         mockedStatic.when(() -> ResponseResolver.resolve(any(), any())).thenReturn(stubResponse);
+
+        // По умолчанию шедулинг возвращает 200 и тело с "result"
+        lenient().when(responseDelay.scheduleResponse(
+                anyLong(), anyString(), anyString(), any(HttpHeaders.class))
+        ).thenAnswer(inv -> CompletableFuture.completedFuture(
+                new ResponseEntity<>("{\"result\":\"ok\"}", HttpStatus.OK)));
     }
 
     @AfterEach
@@ -68,17 +79,19 @@ class ResponseHandlerServiceTest {
         ResponseEntity<String> response = future.get();
         assertEquals(200, response.getStatusCodeValue());
         assertTrue(response.getBody().contains("result"));
+        verify(responseDelay).scheduleResponse(anyLong(), anyString(), eq("testService"), any(HttpHeaders.class));
     }
 
     @Test
     void shouldThrowException_WhenServiceUnavailable() {
-        when(registry.get("testService")).thenReturn(stubService); // 👈 ЭТО ВАЖНО!
+        when(registry.get("testService")).thenReturn(stubService); // важно
 
         ServiceException ex = assertThrows(ServiceException.class, () ->
                 handlerService.handle("{}", "testService", 0L, null)
         );
 
         assertEquals("Сервис временно недоступен. Включите заглушку", ex.getMessage());
+        verify(responseDelay, never()).scheduleResponse(anyLong(), anyString(), anyString(), any(HttpHeaders.class));
     }
 
     @Test
@@ -92,10 +105,11 @@ class ResponseHandlerServiceTest {
 
         verify(delayManager).setDelay("testService", 123L);
         verify(availabilityManager).setAvailable("testService", false);
+        verify(responseDelay).scheduleResponse(anyLong(), anyString(), eq("testService"), any(HttpHeaders.class));
     }
 
     @Test
-    void shouldNotApplyDelayOrAvailability_WhenNullPassed() throws Exception {
+    void shouldNotApplyDelayOrAvailability_WhenNullPassed() {
         when(registry.get("testService")).thenReturn(stubService);
         when(availabilityManager.isAvailable("testService")).thenReturn(true);
         when(correlatorService.correlate(anyString(), anyString(), anyString()))
@@ -105,7 +119,9 @@ class ResponseHandlerServiceTest {
 
         verify(delayManager, never()).setDelay(anyString(), anyLong());
         verify(availabilityManager, never()).setAvailable(anyString(), anyBoolean());
+        verify(responseDelay).scheduleResponse(anyLong(), anyString(), eq("testService"), any(HttpHeaders.class));
     }
+
     @Test
     void shouldThrowException_WhenServiceNotFound() {
         when(registry.get("unknownService")).thenReturn(null);
@@ -115,7 +131,9 @@ class ResponseHandlerServiceTest {
         );
 
         assertTrue(ex.getMessage().contains("не найден"));
+        verify(responseDelay, never()).scheduleResponse(anyLong(), anyString(), anyString(), any(HttpHeaders.class));
     }
+
     @Test
     void shouldThrowException_WhenCorrelationFails() {
         when(registry.get("testService")).thenReturn(stubService);
@@ -126,7 +144,9 @@ class ResponseHandlerServiceTest {
         assertThrows(RuntimeException.class, () ->
                 handlerService.handle("{}", "testService", 0L, null).join()
         );
+        verify(responseDelay, never()).scheduleResponse(anyLong(), anyString(), anyString(), any(HttpHeaders.class));
     }
+
     @Test
     void shouldHandleEmptyRequestGracefully() throws Exception {
         when(registry.get("testService")).thenReturn(stubService);
@@ -139,6 +159,6 @@ class ResponseHandlerServiceTest {
         );
 
         assertEquals(200, future.get().getStatusCodeValue());
+        verify(responseDelay).scheduleResponse(anyLong(), anyString(), eq("testService"), any(HttpHeaders.class));
     }
-
 }

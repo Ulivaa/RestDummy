@@ -1,68 +1,62 @@
 package com.LT.restDummy.helper;
 
 import com.LT.restDummy.victoria.VictoriaWriter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Класс отвечает за выставление задержки для REST-сервиса.
+ * Планирует отложенную отправку ответа для REST-сервиса.
+ * Работает поверх инжектированного ScheduledExecutorService.
  */
 @Slf4j
-public final class ResponseDelay {
+@Component
+@RequiredArgsConstructor
+public class ResponseDelay {
 
-    private static final AtomicInteger THREAD_SEQ = new AtomicInteger(1);
+    /** Пул создаётся в конфиге PropertyBeen#responseDelayExecutor() */
+    @Qualifier("responseDelayExecutor")
+    private final ScheduledExecutorService scheduler;
 
-    private static final ThreadFactory DELAY_THREAD_FACTORY = r -> {
-        Thread t = new Thread(r, "response-delay-" + THREAD_SEQ.getAndIncrement());
-        t.setDaemon(true); // чтобы тесты/приложение не висели из-за пула
-        t.setUncaughtExceptionHandler((thr, ex) ->
-                log.error("Uncaught exception in ResponseDelay scheduler thread {}", thr.getName(), ex));
-        return t;
-    };
-
-    private static final ScheduledExecutorService scheduler =
-            Executors.newScheduledThreadPool(2, DELAY_THREAD_FACTORY);
-
-    private ResponseDelay() {
-        // utility
-    }
+    /** Инжектированный отправитель метрик (без статических вызовов) */
+    private final VictoriaWriter victoriaWriter;
 
     /**
      * Планирует формирование ответа через указанную задержку.
      *
-     * @param delay         задержка в миллисекундах (если отрицательная — будет интерпретирована как 0)
+     * @param delay         задержка в миллисекундах (отрицательная трактуется как 0)
      * @param responseBody  тело ответа
      * @param operationName имя операции для метрик (может быть null/пустым)
-     * @param httpHeaders   заголовки ответа (если null — возьмём пустые)
+     * @param httpHeaders   заголовки ответа (если null — будет пустой набор)
      */
-    public static CompletableFuture<ResponseEntity<String>> scheduleResponse(long delay,
-                                                                             String responseBody,
-                                                                             String operationName,
-                                                                             HttpHeaders httpHeaders) {
+    public CompletableFuture<ResponseEntity<String>> scheduleResponse(long delay,
+                                                                      String responseBody,
+                                                                      String operationName,
+                                                                      HttpHeaders httpHeaders) {
         final CompletableFuture<ResponseEntity<String>> future = new CompletableFuture<>();
         final HttpHeaders safeHeaders = (httpHeaders != null) ? httpHeaders : new HttpHeaders();
-        final long effectiveDelay = (delay < 0L) ? 0L : delay;
+        final long effectiveDelay = Math.max(0L, delay);
 
         scheduler.schedule(() -> {
             try {
                 ResponseEntity<String> response =
-                        new ResponseEntity<String>(responseBody, safeHeaders, HttpStatus.OK);
+                        new ResponseEntity<>(responseBody, safeHeaders, HttpStatus.OK);
                 future.complete(response);
                 log.info("RESPONSE (op='{}', delayMs={}): {}", operationName, effectiveDelay, responseBody);
             } finally {
-                // метрики — best-effort, не валим поток
+                // метрики — best-effort
                 try {
-                    if (operationName != null && !operationName.isEmpty()) {
-                        VictoriaWriter.sendMetrics(operationName, effectiveDelay);
+                    if (operationName != null && !operationName.isEmpty() && victoriaWriter != null) {
+                        // экземплярный вызов вместо статического
+                        victoriaWriter.sendMetrics(operationName, effectiveDelay);
                     }
                 } catch (Exception e) {
                     log.error("Exception while sending metrics", e);

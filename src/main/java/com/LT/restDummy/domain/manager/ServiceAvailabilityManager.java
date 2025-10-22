@@ -1,10 +1,12 @@
 package com.LT.restDummy.domain.manager;
 
 import com.LT.restDummy.domain.model.StubService;
+import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+@Component
 public class ServiceAvailabilityManager {
 
     private final ServiceRegistry registry;
