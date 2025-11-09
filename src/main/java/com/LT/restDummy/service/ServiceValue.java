@@ -1,5 +1,6 @@
 package com.LT.restDummy.service;
 
+import com.LT.restDummy.domain.manager.OccurrenceTracker;
 import com.LT.restDummy.domain.manager.ServiceAvailabilityManager;
 import com.LT.restDummy.domain.manager.ServiceDelayManager;
 import com.LT.restDummy.domain.manager.ServiceRegistry;
@@ -19,14 +20,17 @@ public class ServiceValue {
     private final ServiceRegistry registry;
     private final ServiceAvailabilityManager availability;
     private final ServiceDelayManager delay;
+    private final OccurrenceTracker occurrenceTracker;
 
     // ВАЖНО: зависимости приходят извне (через Spring), а не создаются внутри.
     public ServiceValue(ServiceRegistry registry,
                         ServiceAvailabilityManager availability,
-                        ServiceDelayManager delay) {
+                        ServiceDelayManager delay,
+                        OccurrenceTracker occurrenceTracker) {
         this.registry = registry;
         this.availability = availability;
         this.delay = delay;
+        this.occurrenceTracker = occurrenceTracker;
     }
 
     /** Инициализация реестра пачкой сервисов (например, при старте приложения). */
@@ -47,6 +51,10 @@ public class ServiceValue {
 
     public ServiceDelayManager delay() {
         return delay;
+    }
+
+    public OccurrenceTracker occurrenceTracker() {
+        return occurrenceTracker;
     }
 
     /** Обновляет runtime-настройки сервиса (delay/availability) из переданного объекта. */

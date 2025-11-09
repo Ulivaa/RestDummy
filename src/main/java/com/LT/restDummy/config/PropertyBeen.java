@@ -52,16 +52,51 @@ public class PropertyBeen {
                 properties.load(fis);
             }
 
+            // Собираем базовые имена сервисов (без суффиксов -1, -2 и т.д.)
+            HashMap<String, String> serviceBaseNames = new HashMap<>();
             for (String fileName : allFiles) {
-                try (BufferedReader reader = new BufferedReader(new FileReader("services/" + fileName))) {
-                    String fileContent = reader.lines().collect(Collectors.joining(System.lineSeparator()));
-                    String endpoint = properties.getProperty(fileName + ".endpoint");
-                    if (endpoint != null) {
-                        services.put(endpoint, ServiceFileHandler.getService(fileName, fileContent));
-                    } else {
-                        services.put(fileName, ServiceFileHandler.getService(fileName, fileContent));
-                    }
+                // Если файл имеет формат name-N, извлекаем базовое имя
+                if (fileName.matches(".+-\\d+$")) {
+                    String baseName = fileName.substring(0, fileName.lastIndexOf('-'));
+                    serviceBaseNames.put(fileName, baseName);
+                } else {
+                    // Обычный файл - базовое имя = имя файла
+                    serviceBaseNames.put(fileName, fileName);
                 }
+            }
+
+            // Группируем файлы по базовым именам
+            HashMap<String, List<String>> groupedFiles = new HashMap<>();
+            for (String fileName : allFiles) {
+                String baseName = serviceBaseNames.get(fileName);
+                groupedFiles.computeIfAbsent(baseName, k -> new java.util.ArrayList<>()).add(fileName);
+            }
+
+            // Загружаем сервисы
+            for (String baseName : groupedFiles.keySet()) {
+                List<String> files = groupedFiles.get(baseName);
+                
+                // Проверяем, есть ли файл без суффикса
+                String mainFile = files.stream()
+                        .filter(f -> !f.matches(".+-\\d+$"))
+                        .findFirst()
+                        .orElse(null);
+                
+                String fileContent = "";
+                if (mainFile != null) {
+                    // Есть основной файл - читаем его
+                    try (BufferedReader reader = new BufferedReader(new FileReader("services/" + mainFile))) {
+                        fileContent = reader.lines().collect(Collectors.joining(System.lineSeparator()));
+                    }
+                } else {
+                    // Нет основного файла, только файлы с суффиксами (например, example-1, example-2)
+                    // Передаем пустое содержимое - ResponseBuilder сам загрузит множественные файлы
+                    fileContent = "";
+                }
+                
+                String endpoint = properties.getProperty(baseName + ".endpoint");
+                String serviceKey = endpoint != null ? endpoint : baseName;
+                services.put(serviceKey, ServiceFileHandler.getService(baseName, fileContent));
             }
 
             serviceValue.initialize(services);

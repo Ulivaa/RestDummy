@@ -1,5 +1,6 @@
 package com.LT.restDummy.domain.response;
 
+import com.LT.restDummy.domain.manager.OccurrenceTracker;
 import com.LT.restDummy.domain.model.StubService;
 import com.LT.restDummy.util.JsonXmlParamExtractor;
 import lombok.experimental.UtilityClass;
@@ -11,6 +12,10 @@ import java.util.concurrent.ThreadLocalRandom;
 public class ResponseResolver {
 
     public static StubResponse resolve(StubService service, String request) {
+        return resolve(service, request, null);
+    }
+
+    public static StubResponse resolve(StubService service, String request, OccurrenceTracker occurrenceTracker) {
         if (service == null) {
             return new StubResponse("Не задан сервис для выбора ответа");
         }
@@ -70,6 +75,51 @@ public class ResponseResolver {
                     }
                 }
                 break;
+            }
+
+            case OCCURRENCE_BASED: {
+                if (occurrenceTracker == null || responses.isEmpty()) {
+                    // Fallback: возвращаем первый ответ если tracker недоступен
+                    return responses.get(0);
+                }
+
+                // Получаем параметры из первого ответа (все ответы имеют одинаковые настройки)
+                StubResponse firstResponse = responses.get(0);
+                if (firstResponse == null || firstResponse.getParamName() == null) {
+                    return responses.get(0);
+                }
+
+                String keyParamName = firstResponse.getParamName();
+                int switchAtOccurrence = firstResponse.getKey() != null ? firstResponse.getKey() : 2;
+
+                // Извлекаем значение ключа из запроса
+                String keyValue = JsonXmlParamExtractor.extract(safeRequest, keyParamName, service.getType());
+                if (keyValue == null || keyValue.trim().isEmpty()) {
+                    // Если не удалось извлечь ключ, возвращаем первый ответ
+                    return responses.get(0);
+                }
+
+                // Инкрементируем счетчик вхождений для этого ключа
+                String serviceName = service.getName();
+                int currentOccurrence = occurrenceTracker.incrementAndGet(serviceName, keyValue);
+
+                // Планируем очистку ключа, если настроено время очистки
+                Long cleanupTimeMs = service.getOccurrenceCleanupTimeMs();
+                if (cleanupTimeMs != null && cleanupTimeMs > 0) {
+                    occurrenceTracker.scheduleKeyCleanup(serviceName, keyValue, cleanupTimeMs);
+                }
+
+                // Определяем какой ответ вернуть на основе номера вхождения
+                int responseIndex;
+                if (currentOccurrence < switchAtOccurrence) {
+                    // До порога переключения - возвращаем первый ответ (индекс 0)
+                    responseIndex = 0;
+                } else {
+                    // После порога - возвращаем второй ответ (индекс 1), если он есть
+                    responseIndex = Math.min(1, responses.size() - 1);
+                }
+
+                return responses.get(responseIndex);
             }
 
             default:

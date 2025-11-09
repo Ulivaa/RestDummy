@@ -32,6 +32,11 @@ public class StubResponse {
         this(responseNum, content, ResponseType.PARAM_BASED, paramName, paramValue);
     }
 
+    // OCCURRENCE_BASED
+    public StubResponse(int switchAtOccurrence, String content, String keyParamName, ResponseType type) {
+        this(switchAtOccurrence, content, type, keyParamName, null);
+    }
+
     // Общий приватный конструктор
     private StubResponse(Integer key, String content, ResponseType type, String paramName, String paramValue) {
         this.key = key;

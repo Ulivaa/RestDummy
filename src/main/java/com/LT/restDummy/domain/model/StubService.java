@@ -30,6 +30,9 @@ public class StubService {
     // 🔁 Новый способ хранения ответов
     private List<StubResponse> responses;
     private ResponseType responseType;
+    
+    // ⏰ Время очистки для OCCURRENCE_BASED (в миллисекундах)
+    private Long occurrenceCleanupTimeMs;
 
     public StubService(String name, Long defaultDelay, Long timeout, boolean available) {
         this.name = name;

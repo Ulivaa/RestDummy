@@ -57,7 +57,7 @@ public class ResponseHandlerService {
         final String type = service.getType();
         log.info("📦 Тип логики ответа: {}", service.getResponseType());
 
-        final StubResponse resolved = ResponseResolver.resolve(service, safeRequestBody);
+        final StubResponse resolved = ResponseResolver.resolve(service, safeRequestBody, serviceValue.occurrenceTracker());
         if (resolved == null) {
             throw new ServiceException("Не удалось определить ответ для сервиса [" + serviceName + "]");
         }

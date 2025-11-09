@@ -1,5 +1,6 @@
 package com.LT.restDummy.service;
 
+import com.LT.restDummy.domain.manager.OccurrenceTracker;
 import com.LT.restDummy.domain.manager.ServiceAvailabilityManager;
 import com.LT.restDummy.domain.manager.ServiceDelayManager;
 import com.LT.restDummy.domain.manager.ServiceRegistry;
@@ -7,6 +8,8 @@ import com.LT.restDummy.domain.model.StubService;
 import com.LT.restDummy.domain.response.ResponseResolver;
 import com.LT.restDummy.domain.response.ResponseType;
 import com.LT.restDummy.domain.response.StubResponse;
+
+import java.util.Arrays;
 import com.LT.restDummy.exception.ServiceException;
 import com.LT.restDummy.helper.ResponseCorrelatorService;
 import com.LT.restDummy.helper.ResponseDelay;
@@ -35,6 +38,7 @@ class ResponseHandlerServiceTest {
     @Mock private ServiceDelayManager delayManager;
     @Mock private ServiceAvailabilityManager availabilityManager;
     @Mock private ServiceRegistry registry;
+    @Mock private OccurrenceTracker occurrenceTracker;
 
     private final StubService stubService = new StubService();
     private final StubResponse stubResponse = new StubResponse("{\"result\": \"ok\"}");
@@ -46,12 +50,14 @@ class ResponseHandlerServiceTest {
         lenient().when(serviceValue.delay()).thenReturn(delayManager);
         lenient().when(serviceValue.availability()).thenReturn(availabilityManager);
         lenient().when(serviceValue.registry()).thenReturn(registry);
+        lenient().when(serviceValue.occurrenceTracker()).thenReturn(occurrenceTracker);
 
         stubService.setType("json");
         stubService.setResponseType(ResponseType.DEFAULT);
+        stubService.setResponses(Arrays.asList(stubResponse));
 
         mockedStatic = mockStatic(ResponseResolver.class);
-        mockedStatic.when(() -> ResponseResolver.resolve(any(), any())).thenReturn(stubResponse);
+        mockedStatic.when(() -> ResponseResolver.resolve(any(), any(), any())).thenReturn(stubResponse);
 
         // По умолчанию шедулинг возвращает 200 и тело с "result"
         lenient().when(responseDelay.scheduleResponse(
@@ -138,7 +144,8 @@ class ResponseHandlerServiceTest {
     void shouldThrowException_WhenCorrelationFails() {
         when(registry.get("testService")).thenReturn(stubService);
         when(availabilityManager.isAvailable("testService")).thenReturn(true);
-        when(correlatorService.correlate(anyString(), anyString(), anyString()))
+        // Убираем неиспользуемый мок - исключение должно быть выброшено из ResponseResolver
+        mockedStatic.when(() -> ResponseResolver.resolve(any(), any(), any()))
                 .thenThrow(new RuntimeException("Ошибка корреляции"));
 
         assertThrows(RuntimeException.class, () ->
